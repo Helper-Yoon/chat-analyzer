@@ -7,45 +7,232 @@ from openpyxl.styles import PatternFill, Font, Alignment
 import io
 import base64
 
-# 페이지 설정
+# 페이지 설정 - 다크 테마
 st.set_page_config(
     page_title="SNS센터 채팅분석 프로그램",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# CSS 스타일 적용
+# 다크모드 + 아정당 블루 CSS
 st.markdown("""
     <style>
+    /* 전체 배경 다크모드 */
+    .stApp {
+        background-color: #0a0a0a;
+        color: #ffffff;
+    }
+    
+    /* 메인 헤더 */
     .main-header {
-        background: linear-gradient(90deg, #0D6EFD 0%, #0056b3 100%);
-        padding: 2rem;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #004C99 0%, #0066CC 100%);
+        padding: 2.5rem;
+        border-radius: 15px;
         margin-bottom: 2rem;
-        color: white;
+        box-shadow: 0 10px 30px rgba(0, 102, 204, 0.3);
         text-align: center;
+        border: 1px solid rgba(0, 102, 204, 0.5);
     }
-    .stButton>button {
-        background-color: #0D6EFD;
-        color: white;
+    
+    .main-header h1 {
+        color: #ffffff;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .main-header p {
+        color: #b3d9ff;
+        font-size: 1.1rem;
+    }
+    
+    /* 카드 스타일 */
+    .card {
+        background: #1a1a1a;
+        border: 1px solid #004C99;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 102, 204, 0.2);
+    }
+    
+    .card-header {
+        color: #4da6ff;
+        font-size: 1.3rem;
         font-weight: bold;
-        border-radius: 5px;
-        border: none;
-        padding: 0.5rem 2rem;
-        width: 100%;
-        transition: all 0.3s;
+        margin-bottom: 1rem;
+        border-bottom: 2px solid #004C99;
+        padding-bottom: 0.5rem;
     }
-    .stButton>button:hover {
-        background-color: #0056b3;
+    
+    /* 버튼 스타일 */
+    .stButton > button {
+        background: linear-gradient(135deg, #004C99 0%, #0066CC 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+        width: 100%;
+    }
+    
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #0066CC 0%, #0080ff 100%);
+        box-shadow: 0 6px 20px rgba(0, 102, 204, 0.5);
         transform: translateY(-2px);
     }
-    .info-box {
-        background-color: #f0f4f8;
-        padding: 1rem;
+    
+    /* 입력 필드 스타일 */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stDateInput > div > div > input {
+        background-color: #2a2a2a;
+        color: #ffffff;
+        border: 1px solid #004C99;
         border-radius: 5px;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: #0066CC;
+        box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+    }
+    
+    /* 파일 업로더 스타일 */
+    .stFileUploader > div {
+        background-color: #1a1a1a;
+        border: 2px dashed #004C99;
+        border-radius: 10px;
+        padding: 2rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stFileUploader > div:hover {
+        border-color: #0066CC;
+        background-color: #262626;
+        box-shadow: 0 4px 15px rgba(0, 102, 204, 0.2);
+    }
+    
+    /* 로그 박스 스타일 */
+    .log-box {
+        background-color: #0d0d0d;
+        border: 1px solid #004C99;
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: 'Courier New', monospace;
+        color: #4da6ff;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    /* 정보 박스 스타일 */
+    .info-box {
+        background: linear-gradient(135deg, #1a1a1a 0%, #262626 100%);
+        border-left: 4px solid #0066CC;
+        padding: 1.2rem;
+        border-radius: 8px;
         margin: 1rem 0;
-        border-left: 4px solid #0D6EFD;
+        box-shadow: 0 2px 10px rgba(0, 102, 204, 0.2);
+    }
+    
+    .info-box h4 {
+        color: #4da6ff;
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-box ul {
+        color: #b3d9ff;
+    }
+    
+    /* Progress bar 스타일 */
+    .stProgress > div > div > div > div {
+        background-color: #0066CC;
+    }
+    
+    /* Success/Error/Warning 메시지 스타일 */
+    .stSuccess {
+        background-color: rgba(0, 102, 204, 0.1);
+        border: 1px solid #0066CC;
+        color: #4da6ff;
+    }
+    
+    .stError {
+        background-color: rgba(255, 0, 0, 0.1);
+        border: 1px solid #ff4444;
+    }
+    
+    .stWarning {
+        background-color: rgba(255, 193, 7, 0.1);
+        border: 1px solid #ffc107;
+    }
+    
+    /* 탭 스타일 */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #1a1a1a;
+        border-bottom: 2px solid #004C99;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        color: #b3d9ff;
+        background-color: transparent;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #004C99;
+        color: white;
+    }
+    
+    /* Divider 스타일 */
+    hr {
+        border-color: #004C99;
+        opacity: 0.3;
+    }
+    
+    /* 라벨 스타일 */
+    label {
+        color: #4da6ff !important;
+        font-weight: 500;
+    }
+    
+    /* 다운로드 버튼 특별 스타일 */
+    .download-button {
+        background: linear-gradient(135deg, #00cc66 0%, #00ff88 100%);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(0, 204, 102, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(0, 204, 102, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(0, 204, 102, 0);
+        }
+    }
+    
+    /* 스크롤바 스타일 */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #1a1a1a;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #004C99;
+        border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #0066CC;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -61,16 +248,27 @@ class CollaborationAnalyzer:
             st.session_state.result_file = None
         if 'log_messages' not in st.session_state:
             st.session_state.log_messages = []
+        if 'processing' not in st.session_state:
+            st.session_state.processing = False
 
     def log(self, message):
         timestamp = datetime.now().strftime('%H:%M:%S')
         log_entry = f"[{timestamp}] {message}"
         st.session_state.log_messages.append(log_entry)
 
+    @st.cache_data(show_spinner=False)
+    def load_excel_cached(_self, file_bytes, file_name):
+        """엑셀 파일을 캐시하여 로드"""
+        return pd.read_excel(io.BytesIO(file_bytes), sheet_name=None, engine='openpyxl')
+
     def load_and_process_data(self, file, start_date_str, end_date_str):
         try:
             self.log("📁 엑셀 파일 로딩 중...")
-            all_sheets = pd.read_excel(file, sheet_name=None, engine='openpyxl')
+            
+            # 파일을 바이트로 읽어서 캐시 활용
+            file_bytes = file.read()
+            file_name = file.name
+            all_sheets = self.load_excel_cached(file_bytes, file_name)
             
             required_sheets = ['UserChat data', 'Message data', 'Manager data']
             sheet_data = {core_name: [] for core_name in required_sheets}
@@ -106,12 +304,12 @@ class CollaborationAnalyzer:
             user_chat_df['firstOpenedAt'] = pd.to_datetime(user_chat_df['firstOpenedAt'], errors='coerce')
             user_chat_df.dropna(subset=['firstOpenedAt'], inplace=True)
             filtered_user_chat_df = user_chat_df[(user_chat_df['firstOpenedAt'] >= start_ts) & (user_chat_df['firstOpenedAt'] < end_ts)]
-            self.log(f"📊 담당 상담 집계 대상: {len(filtered_user_chat_df)}개 상담")
+            self.log(f"📊 담당 상담 집계 대상: {len(filtered_user_chat_df):,}개 상담")
 
             message_df['createdAt'] = pd.to_datetime(message_df['createdAt'], errors='coerce')
             message_df.dropna(subset=['createdAt'], inplace=True)
             filtered_message_df = message_df[(message_df['createdAt'] >= start_ts) & (message_df['createdAt'] < end_ts)]
-            self.log(f"💬 메시지 분석 대상: {len(filtered_message_df)}개 메시지")
+            self.log(f"💬 메시지 분석 대상: {len(filtered_message_df):,}개 메시지")
             
             if filtered_message_df.empty:
                 st.error("선택된 기간 내에 데이터가 없습니다.")
@@ -120,7 +318,7 @@ class CollaborationAnalyzer:
             merged_df = pd.merge(filtered_message_df, user_chat_df[['id', 'assigneeId']], left_on='chatId', right_on='id', how='left').dropna(subset=['assigneeId'])
             merged_df = pd.merge(merged_df, manager_df[['id', 'name']], left_on='personId', right_on='id', how='left', suffixes=('', '_manager')).rename(columns={'name': 'authorName'}).dropna(subset=['authorName'])
             
-            self.log(f"✅ 총 {len(merged_df)}개의 유효 메시지 레코드 처리됨")
+            self.log(f"✅ 총 {len(merged_df):,}개의 유효 메시지 레코드 처리됨")
             return {'merged': merged_df, 'user_chat': filtered_user_chat_df, 'manager': manager_df}
 
         except Exception as e:
@@ -142,8 +340,8 @@ class CollaborationAnalyzer:
 
     def style_header(self, writer, sheet_name, df):
         worksheet = writer.sheets[sheet_name]
-        header_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
-        header_font = Font(bold=True, color="000000")
+        header_fill = PatternFill(start_color="004C99", end_color="004C99", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
         center_align = Alignment(horizontal='center', vertical='center')
         for col_idx in range(1, df.shape[1] + 1):
             cell = worksheet.cell(row=1, column=col_idx)
@@ -151,19 +349,17 @@ class CollaborationAnalyzer:
             cell.font = header_font
             cell.alignment = center_align
 
-    def create_output_excel(self, processed_data, start_date_str, end_date_str, managers_list, exclusion_list):
-        df_merged = processed_data['merged']
-        user_chat_df = processed_data['user_chat']
-        manager_df = processed_data['manager']
-        
-        output = io.BytesIO()
-        
-        if exclusion_list:
-            self.log(f"🚫 제외 명단: {', '.join(exclusion_list)}")
+    @st.cache_data(show_spinner=False)
+    def process_analysis(_self, df_merged, user_chat_df, manager_df, managers_list, exclusion_list):
+        """분석 로직을 캐시하여 처리"""
+        # 기존 create_output_excel의 분석 로직 부분만 분리
+        return _self._process_analysis_internal(df_merged, user_chat_df, manager_df, managers_list, exclusion_list)
 
+    def _process_analysis_internal(self, df_merged, user_chat_df, manager_df, managers_list, exclusion_list):
+        """실제 분석 로직"""
         manager_data = df_merged[df_merged['authorName'].isin(managers_list)]
         agent_data = df_merged[(~df_merged['authorName'].isin(managers_list)) & (~df_merged['authorName'].isin(exclusion_list))]
-
+        
         all_agents = pd.DataFrame({'authorName': agent_data['authorName'].unique()})
         agent_non_assignee = agent_data[agent_data['personId'] != agent_data['assigneeId']]
         
@@ -177,15 +373,41 @@ class CollaborationAnalyzer:
         
         total_msg_counts = agent_data.groupby('authorName').size().reset_index(name='total_messages')
         
+        filter_df = pd.merge(all_agents, hir_summary, on='authorName', how='left')
+        filter_df = pd.merge(filter_df, total_msg_counts, on='authorName', how='left')
+        filter_df.fillna(0, inplace=True)
+        
+        return {
+            'manager_data': manager_data,
+            'agent_data': agent_data,
+            'filter_df': filter_df,
+            'total_msg_counts': total_msg_counts
+        }
+
+    def create_output_excel(self, processed_data, start_date_str, end_date_str, managers_list, exclusion_list):
+        df_merged = processed_data['merged']
+        user_chat_df = processed_data['user_chat']
+        manager_df = processed_data['manager']
+        
+        output = io.BytesIO()
+        
+        if exclusion_list:
+            self.log(f"🚫 제외 명단: {', '.join(exclusion_list)}")
+
+        # 캐시된 분석 결과 사용
+        analysis_result = self.process_analysis(
+            df_merged, user_chat_df, manager_df, managers_list, exclusion_list
+        )
+        
+        manager_data = analysis_result['manager_data']
+        agent_data = analysis_result['agent_data']
+        filter_df = analysis_result['filter_df']
+        
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
         end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
         analysis_days = (end_date - start_date).days + 1
         min_msg_threshold = analysis_days * 10
         self.log(f"📅 분석 기간: {analysis_days}일, 최소 메시지 수: {min_msg_threshold}개")
-
-        filter_df = pd.merge(all_agents, hir_summary, on='authorName', how='left')
-        filter_df = pd.merge(filter_df, total_msg_counts, on='authorName', how='left')
-        filter_df.fillna(0, inplace=True)
 
         self.log(f"👥 필터링 전 상담사 수: {len(filter_df)}명")
         filtered_authors_df = filter_df[
@@ -199,6 +421,7 @@ class CollaborationAnalyzer:
             self.log("⚠️ 필터링 후 분석 대상 상담사가 없습니다.")
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 pd.DataFrame({'알림': ['필터 조건에 해당하는 상담사가 없어 데이터를 생성할 수 없습니다.']}).to_excel(writer, sheet_name='결과 없음', index=False)
+            output.seek(0)
             return output
 
         authors_to_keep = filtered_authors_df['authorName'].unique()
@@ -359,10 +582,10 @@ class CollaborationAnalyzer:
             header_font = Font(bold=True, size=10)
             center_align = Alignment(horizontal='center', vertical='center')
 
-            top5_header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-            bottom5_header_fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
-            top5_data_fill = PatternFill(start_color="DDEBF7", end_color="DDEBF7", fill_type="solid")
-            bottom5_data_fill = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
+            top5_header_fill = PatternFill(start_color="004C99", end_color="004C99", fill_type="solid")
+            bottom5_header_fill = PatternFill(start_color="CC0000", end_color="CC0000", fill_type="solid")
+            top5_data_fill = PatternFill(start_color="E6F2FF", end_color="E6F2FF", fill_type="solid")
+            bottom5_data_fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
             
             metrics_to_rank = {
                 '담당 상담 수': '담당 상담 수', '담당 메시지 수': '담당 메시지 수', '담당 글자 수': '담당 글자 수',
@@ -415,7 +638,7 @@ class CollaborationAnalyzer:
             worksheet.column_dimensions[get_column_letter(5)].width = 15
             self.log("✅ '스코어보드' 시트 생성 완료")
 
-            # 상세 메시지 내역 시트
+            # 상세 메시지 내역 시트 (간소화)
             non_assignee_df = df_merged[df_merged['personId'] != df_merged['assigneeId']]
             assignee_df = df_merged[df_merged['personId'] == df_merged['assigneeId']]
 
@@ -486,76 +709,132 @@ def main():
     st.markdown("""
         <div class="main-header">
             <h1>📊 SNS센터 채팅분석 프로그램 v1.9</h1>
-            <p style="margin: 0;">채팅 데이터를 분석하여 상담사의 협업 성과를 평가합니다</p>
+            <p>채팅 데이터를 분석하여 상담사의 협업 성과를 평가합니다</p>
         </div>
     """, unsafe_allow_html=True)
 
     analyzer = CollaborationAnalyzer()
 
-    # 사이드바
-    with st.sidebar:
-        st.header("⚙️ 분석 설정")
+    # 메인 페이지에 탭 구성
+    tab1, tab2, tab3 = st.tabs(["📤 분석 설정", "📊 분석 실행", "📥 결과 다운로드"])
+    
+    with tab1:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-header">📁 1단계: 파일 업로드</div>', unsafe_allow_html=True)
         
-        st.subheader("1️⃣ 파일 업로드")
         uploaded_file = st.file_uploader(
             "엑셀 파일을 선택하세요",
             type=['xlsx'],
-            help="UserChat data, Message data, Manager data 시트가 포함된 엑셀 파일"
+            help="UserChat data, Message data, Manager data 시트가 포함된 엑셀 파일",
+            key="file_uploader"
         )
         
-        st.subheader("2️⃣ 분석 기간")
+        if uploaded_file:
+            st.success(f"✅ 파일 업로드 완료: {uploaded_file.name}")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 2개 컬럼으로 날짜와 관리자 설정
         col1, col2 = st.columns(2)
+        
         with col1:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.markdown('<div class="card-header">📅 2단계: 분석 기간 설정</div>', unsafe_allow_html=True)
+            
             start_date = st.date_input(
                 "시작일",
                 value=datetime(2025, 7, 1),
-                format="YYYY-MM-DD"
+                format="YYYY-MM-DD",
+                key="start_date"
             )
-        with col2:
+            
             end_date = st.date_input(
                 "종료일",
                 value=datetime.now() - timedelta(days=1),
-                format="YYYY-MM-DD"
+                format="YYYY-MM-DD",
+                key="end_date"
             )
+            
+            # 기간 계산 표시
+            if start_date and end_date:
+                days = (end_date - start_date).days + 1
+                st.info(f"📊 분석 기간: {days}일")
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        st.subheader("3️⃣ 관리자 설정")
-        managers = st.text_area(
-            "관리자 목록 (쉼표로 구분)",
-            value="이민주, 이종민, 윤도우리, 김시진, 손진우",
-            height=80
-        )
+        with col2:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.markdown('<div class="card-header">👥 3단계: 인원 설정</div>', unsafe_allow_html=True)
+            
+            managers = st.text_area(
+                "관리자 목록 (쉼표로 구분)",
+                value="이민주, 이종민, 윤도우리, 김시진, 손진우",
+                height=60,
+                key="managers"
+            )
+            
+            exclusions = st.text_area(
+                "제외할 이름 (쉼표로 구분, 선택사항)",
+                value="채주은, 정용욱, 한승윤, 김종현",
+                height=60,
+                key="exclusions"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+    
+    with tab2:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-header">🚀 분석 실행</div>', unsafe_allow_html=True)
         
-        exclusions = st.text_area(
-            "제외할 이름 (쉼표로 구분, 선택사항)",
-            value="채주은, 정용욱, 한승윤, 김종현",
-            height=80
-        )
+        # 설정 요약
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("📁 파일", "✅ 업로드됨" if uploaded_file else "❌ 미업로드")
+        with col2:
+            if 'start_date' in locals() and 'end_date' in locals():
+                days = (end_date - start_date).days + 1
+                st.metric("📅 분석 기간", f"{days}일")
+            else:
+                st.metric("📅 분석 기간", "미설정")
+        with col3:
+            if 'managers' in locals():
+                manager_count = len([m.strip() for m in managers.split(',') if m.strip()])
+                st.metric("👥 관리자 수", f"{manager_count}명")
+            else:
+                st.metric("👥 관리자 수", "미설정")
         
         st.divider()
         
-        analyze_button = st.button(
-            "🚀 분석 실행",
-            type="primary",
-            use_container_width=True
-        )
-
-    # 메인 컨텐츠
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.subheader("📋 진행 상황")
-        log_container = st.container()
+        # 분석 실행 버튼
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            analyze_button = st.button(
+                "🎯 분석 시작",
+                type="primary",
+                use_container_width=True,
+                disabled=not uploaded_file
+            )
         
+        # 진행 상황 표시
         if analyze_button:
             if not uploaded_file:
                 st.error("⚠️ 파일을 먼저 업로드해주세요!")
             else:
                 st.session_state.log_messages = []
+                st.session_state.processing = True
+                
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                log_container = st.container()
                 
                 with st.spinner("분석 중입니다... 잠시만 기다려주세요 ⏳"):
+                    # 진행률 업데이트
+                    progress_bar.progress(10)
+                    status_text.text("📝 설정 확인 중...")
+                    
                     # 관리자 및 제외 명단 파싱
                     managers_list = [name.strip() for name in managers.split(',') if name.strip()]
                     exclusion_list = [name.strip() for name in exclusions.split(',') if name.strip()]
+                    
+                    progress_bar.progress(30)
+                    status_text.text("📊 데이터 로딩 중...")
                     
                     # 데이터 처리
                     processed_data = analyzer.load_and_process_data(
@@ -564,8 +843,14 @@ def main():
                         end_date.strftime("%Y-%m-%d")
                     )
                     
+                    progress_bar.progress(60)
+                    status_text.text("🔍 분석 수행 중...")
+                    
                     if processed_data:
                         # 결과 생성
+                        progress_bar.progress(80)
+                        status_text.text("📁 결과 파일 생성 중...")
+                        
                         result_file = analyzer.create_output_excel(
                             processed_data,
                             start_date.strftime("%Y-%m-%d"),
@@ -574,60 +859,101 @@ def main():
                             exclusion_list
                         )
                         
+                        progress_bar.progress(100)
+                        status_text.text("✅ 분석 완료!")
+                        
                         st.session_state.analysis_complete = True
                         st.session_state.result_file = result_file
+                        st.session_state.processing = False
                         
-                        st.success("✅ 분석이 완료되었습니다!")
+                        st.success("🎉 분석이 성공적으로 완료되었습니다!")
+                        st.balloons()
+                
+                # 로그 표시
+                with log_container:
+                    if st.session_state.log_messages:
+                        st.markdown('<div class="log-box">', unsafe_allow_html=True)
+                        for log in st.session_state.log_messages:
+                            st.text(log)
+                        st.markdown('</div>', unsafe_allow_html=True)
         
-        # 로그 표시
-        with log_container:
-            if st.session_state.log_messages:
-                log_text = "\n".join(st.session_state.log_messages)
-                st.text_area(
-                    "로그",
-                    value=log_text,
-                    height=300,
-                    disabled=True
-                )
-            else:
-                st.info("분석을 시작하려면 좌측 사이드바에서 설정 후 '분석 실행' 버튼을 클릭하세요.")
+        elif not uploaded_file:
+            st.info("📌 분석을 시작하려면 먼저 파일을 업로드해주세요.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    with col2:
-        st.subheader("📥 결과 다운로드")
+    with tab3:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-header">📥 분석 결과 다운로드</div>', unsafe_allow_html=True)
         
         if st.session_state.analysis_complete and st.session_state.result_file:
-            # 다운로드 버튼
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"SNS센터_채팅분석_결과_{timestamp}.xlsx"
+            # 결과 요약
+            col1, col2 = st.columns(2)
             
-            st.download_button(
-                label="📊 결과 파일 다운로드",
-                data=st.session_state.result_file,
-                file_name=filename,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
+            with col1:
+                st.markdown("""
+                    <div class="info-box">
+                        <h4>📌 생성된 시트 목록</h4>
+                        <ul>
+                            <li>📊 스코어보드</li>
+                            <li>📋 채팅분석_요약</li>
+                            <li>👔 관리자_분석</li>
+                            <li>📈 채팅분석_지표</li>
+                            <li>💬 상세 메시지 내역 (도움/담당)</li>
+                            <li>❓ 도움말</li>
+                        </ul>
+                    </div>
+                """, unsafe_allow_html=True)
             
-            # 분석 요약 정보
+            with col2:
+                # 다운로드 버튼
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"SNS센터_채팅분석_결과_{timestamp}.xlsx"
+                
+                st.download_button(
+                    label="💾 결과 파일 다운로드",
+                    data=st.session_state.result_file,
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    type="primary"
+                )
+                
+                st.success("✅ 다운로드 준비 완료!")
+                
+                # 추가 액션
+                st.divider()
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🔄 새로운 분석 시작", use_container_width=True):
+                        st.session_state.clear()
+                        st.rerun()
+                with col2:
+                    if st.button("📊 분석 설정 유지", use_container_width=True):
+                        st.session_state.analysis_complete = False
+                        st.session_state.result_file = None
+                        st.rerun()
+        else:
+            st.info("📌 분석이 완료되면 여기서 결과를 다운로드할 수 있습니다.")
             st.markdown("""
-                <div class="info-box">
-                    <h4>📌 생성된 시트</h4>
-                    <ul>
-                        <li>스코어보드</li>
-                        <li>채팅분석_요약</li>
-                        <li>관리자_분석</li>
-                        <li>채팅분석_지표</li>
-                        <li>상세 메시지 내역</li>
-                        <li>도움말</li>
-                    </ul>
+                <div style="text-align: center; padding: 3rem;">
+                    <h3 style="color: #4da6ff;">분석 프로세스</h3>
+                    <p style="color: #b3d9ff; font-size: 1.1rem;">
+                        1️⃣ 파일 업로드 → 2️⃣ 기간 설정 → 3️⃣ 인원 설정 → 4️⃣ 분석 실행 → 5️⃣ 결과 다운로드
+                    </p>
                 </div>
             """, unsafe_allow_html=True)
-        else:
-            st.info("분석이 완료되면 여기서 결과를 다운로드할 수 있습니다.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # 푸터
     st.divider()
-    st.caption("© 2025 SNS센터 채팅분석 프로그램 v1.9 | Powered by Streamlit")
+    st.markdown("""
+        <div style="text-align: center; color: #4da6ff; padding: 1rem;">
+            <p>© 2025 SNS센터 채팅분석 프로그램 v1.9 | Powered by Streamlit</p>
+            <p style="font-size: 0.9rem; color: #666;">아정당 커뮤니케이션즈</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
