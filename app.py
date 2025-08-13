@@ -8,21 +8,80 @@ import io
 
 # 페이지 설정
 st.set_page_config(
-    page_title="SNS센터 채팅분석 프로그램",
+    page_title="SNS센터 채팅분석",
     page_icon="📊",
     layout="wide"
 )
 
-# 간단한 스타일만 적용
+# 컴팩트한 스타일
 st.markdown("""
     <style>
+    /* 상단 패딩 제거 */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        max-width: 1200px;
+    }
+    
+    /* 제목 바 스타일 */
+    .title-bar {
+        background: linear-gradient(90deg, #004C99 0%, #0066CC 100%);
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border-radius: 5px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .title-bar h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    
+    /* 분석 실행 버튼 스타일 */
     .stButton > button {
-        background-color: #004C99;
+        background: linear-gradient(90deg, #004C99 0%, #0066CC 100%);
         color: white;
         width: 100%;
         height: 50px;
         font-size: 18px;
         font-weight: bold;
+        border: none;
+        border-radius: 5px;
+        margin-top: 1rem;
+    }
+    
+    .stButton > button:hover {
+        background: linear-gradient(90deg, #0066CC 0%, #0080FF 100%);
+    }
+    
+    /* 완료 페이지 스타일 */
+    .success-container {
+        text-align: center;
+        padding: 2rem;
+        background: #f0f8ff;
+        border-radius: 10px;
+        border: 2px solid #004C99;
+        margin: 2rem 0;
+    }
+    
+    .success-icon {
+        font-size: 4rem;
+        color: #004C99;
+        margin-bottom: 1rem;
+    }
+    
+    /* 컴팩트한 입력 필드 */
+    .stTextArea textarea {
+        min-height: 60px !important;
+    }
+    
+    /* 섹션 간격 조정 */
+    .row-widget {
+        margin-bottom: 0.5rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -33,6 +92,8 @@ class CollaborationAnalyzer:
             st.session_state.analysis_complete = False
         if 'result_file' not in st.session_state:
             st.session_state.result_file = None
+        if 'show_result_page' not in st.session_state:
+            st.session_state.show_result_page = False
 
     def load_and_process_data(self, file, start_date_str, end_date_str):
         try:
@@ -316,96 +377,33 @@ class CollaborationAnalyzer:
 
 # 메인 앱
 def main():
-    st.title("📊 SNS센터 채팅분석 프로그램 v1.9")
-    st.markdown("채팅 데이터를 분석하여 상담사의 협업 성과를 평가합니다")
-    st.markdown("---")
-
     analyzer = CollaborationAnalyzer()
-
-    # 3개 컬럼 레이아웃
-    col1, col2, col3 = st.columns([1, 1, 1])
     
-    with col1:
-        st.subheader("📁 1단계: 파일 업로드")
-        uploaded_file = st.file_uploader(
-            "엑셀 파일 선택",
-            type=['xlsx'],
-            help="UserChat, Message, Manager data 시트 포함"
-        )
-        if uploaded_file:
-            st.success(f"✅ {uploaded_file.name}")
+    # 제목 바
+    st.markdown("""
+        <div class="title-bar">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size: 1.8rem; margin-right: 10px;">📊</span>
+                <h1>SNS센터 채팅분석 프로그램 v1.9</h1>
+            </div>
+            <span style="font-size: 0.9rem;">채팅 데이터 협업 성과 분석</span>
+        </div>
+    """, unsafe_allow_html=True)
     
-    with col2:
-        st.subheader("📅 2단계: 분석 기간")
-        start_date = st.date_input(
-            "시작일",
-            value=datetime(2025, 7, 1)
-        )
-        end_date = st.date_input(
-            "종료일",
-            value=datetime.now() - timedelta(days=1)
-        )
-        days = (end_date - start_date).days + 1
-        st.info(f"기간: {days}일")
-    
-    with col3:
-        st.subheader("👥 3단계: 인원 설정")
-        managers = st.text_area(
-            "관리자 (쉼표 구분)",
-            value="이민주, 이종민, 윤도우리, 김시진, 손진우",
-            height=70
-        )
-        exclusions = st.text_area(
-            "제외 (선택)",
-            value="채주은, 정용욱, 한승윤, 김종현",
-            height=70
-        )
-
-    st.markdown("---")
-    
-    # 분석 실행 버튼 (중앙 배치)
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        analyze_button = st.button(
-            "🚀 분석 실행",
-            type="primary",
-            use_container_width=True,
-            disabled=not uploaded_file
-        )
-    
-    # 분석 실행
-    if analyze_button:
-        with st.spinner("분석 중... 잠시만 기다려주세요"):
-            # 설정 파싱
-            managers_list = [name.strip() for name in managers.split(',') if name.strip()]
-            exclusion_list = [name.strip() for name in exclusions.split(',') if name.strip()]
-            
-            # 데이터 처리
-            processed_data = analyzer.load_and_process_data(
-                uploaded_file,
-                start_date.strftime("%Y-%m-%d"),
-                end_date.strftime("%Y-%m-%d")
-            )
-            
-            if processed_data:
-                # 결과 생성
-                result_file = analyzer.create_output_excel(
-                    processed_data,
-                    start_date.strftime("%Y-%m-%d"),
-                    end_date.strftime("%Y-%m-%d"),
-                    managers_list,
-                    exclusion_list
-                )
-                
-                st.session_state.analysis_complete = True
-                st.session_state.result_file = result_file
-                
-                st.success("✅ 분석이 완료되었습니다!")
-                st.balloons()
-    
-    # 결과 다운로드
-    if st.session_state.analysis_complete and st.session_state.result_file:
-        st.markdown("---")
+    # 분석 완료 페이지
+    if st.session_state.show_result_page:
+        st.markdown("""
+            <div class="success-container">
+                <div class="success-icon">✅</div>
+                <h2 style="color: #004C99; margin-bottom: 1rem;">분석이 완료되었습니다!</h2>
+                <p style="color: #666; margin-bottom: 2rem;">
+                    분석 결과가 준비되었습니다.<br>
+                    아래 버튼을 클릭하여 Excel 파일을 다운로드하세요.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # 다운로드 섹션
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -416,9 +414,131 @@ def main():
                 data=st.session_state.result_file,
                 file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                type="secondary",
+                type="primary",
                 use_container_width=True
             )
+            
+            if st.button("🔄 새로운 분석 시작", use_container_width=True):
+                st.session_state.show_result_page = False
+                st.session_state.analysis_complete = False
+                st.session_state.result_file = None
+                st.rerun()
+        
+        # 생성된 시트 정보
+        st.info("""
+            📄 **생성된 시트**: 
+            스코어보드 | 채팅분석_요약 | 관리자_분석 | 채팅분석_지표
+        """)
+    
+    # 메인 분석 페이지
+    else:
+        # 입력 섹션 (컴팩트하게 3개 컬럼)
+        col1, col2, col3 = st.columns([1.2, 1, 1])
+        
+        with col1:
+            st.markdown("##### 📁 파일 업로드")
+            uploaded_file = st.file_uploader(
+                "",
+                type=['xlsx'],
+                help="UserChat, Message, Manager data 시트 포함",
+                label_visibility="collapsed"
+            )
+            if uploaded_file:
+                st.success(f"✅ {uploaded_file.name}")
+        
+        with col2:
+            st.markdown("##### 📅 분석 기간")
+            start_date = st.date_input(
+                "시작일",
+                value=datetime(2025, 7, 1),
+                label_visibility="collapsed"
+            )
+            end_date = st.date_input(
+                "종료일", 
+                value=datetime.now() - timedelta(days=1),
+                label_visibility="collapsed"
+            )
+            days = (end_date - start_date).days + 1
+            st.caption(f"분석 기간: {days}일")
+        
+        with col3:
+            st.markdown("##### 👥 인원 설정")
+            managers = st.text_area(
+                "관리자",
+                value="이민주, 이종민, 윤도우리, 김시진, 손진우",
+                height=60,
+                label_visibility="collapsed",
+                placeholder="관리자 이름 (쉼표 구분)"
+            )
+            exclusions = st.text_area(
+                "제외",
+                value="채주은, 정용욱, 한승윤, 김종현",
+                height=60,
+                label_visibility="collapsed",
+                placeholder="제외할 이름 (선택)"
+            )
+        
+        # 구분선
+        st.markdown("---")
+        
+        # 분석 실행 버튼 (전체 너비 파란 바)
+        analyze_button = st.button(
+            "🚀 분석 실행",
+            type="primary",
+            use_container_width=True,
+            disabled=not uploaded_file
+        )
+        
+        if not uploaded_file:
+            st.warning("⚠️ 분석을 시작하려면 Excel 파일을 업로드해주세요.")
+        
+        # 분석 실행
+        if analyze_button:
+            with st.spinner("분석 중... 잠시만 기다려주세요"):
+                # 프로그레스 바
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                # 설정 파싱
+                status_text.text("설정 확인 중...")
+                progress_bar.progress(20)
+                managers_list = [name.strip() for name in managers.split(',') if name.strip()]
+                exclusion_list = [name.strip() for name in exclusions.split(',') if name.strip()]
+                
+                # 데이터 처리
+                status_text.text("데이터 로딩 중...")
+                progress_bar.progress(40)
+                processed_data = analyzer.load_and_process_data(
+                    uploaded_file,
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d")
+                )
+                
+                if processed_data:
+                    # 결과 생성
+                    status_text.text("분석 수행 중...")
+                    progress_bar.progress(70)
+                    
+                    result_file = analyzer.create_output_excel(
+                        processed_data,
+                        start_date.strftime("%Y-%m-%d"),
+                        end_date.strftime("%Y-%m-%d"),
+                        managers_list,
+                        exclusion_list
+                    )
+                    
+                    status_text.text("결과 생성 중...")
+                    progress_bar.progress(90)
+                    
+                    st.session_state.analysis_complete = True
+                    st.session_state.result_file = result_file
+                    st.session_state.show_result_page = True
+                    
+                    progress_bar.progress(100)
+                    status_text.text("완료!")
+                    
+                    # 완료 페이지로 전환
+                    st.rerun()
 
 if __name__ == "__main__":
     main()
