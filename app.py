@@ -20,7 +20,7 @@ st.markdown("""
     .block-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
-        max-width: 1200px;
+        max-width: 1000px;
     }
     
     /* 제목 바 스타일 */
@@ -74,14 +74,34 @@ st.markdown("""
         margin-bottom: 1rem;
     }
     
-    /* 컴팩트한 입력 필드 */
-    .stTextArea textarea {
-        min-height: 60px !important;
+    /* 입력 필드 스타일 */
+    .stTextInput > div > div > input {
+        border: 1px solid #d0d0d0;
+        border-radius: 4px;
+        padding: 0.4rem;
     }
     
-    /* 섹션 간격 조정 */
-    .row-widget {
-        margin-bottom: 0.5rem;
+    /* 섹션 제목 스타일 */
+    h5 {
+        color: #004C99;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.8rem;
+        margin-top: 1rem;
+    }
+    
+    /* 컬럼 내 라벨 스타일 */
+    .label-text {
+        font-weight: 600;
+        color: #333;
+        display: flex;
+        align-items: center;
+        height: 38px;
+    }
+    
+    /* 섹션 간격 줄이기 */
+    .element-container {
+        margin-bottom: 0.5rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -432,50 +452,59 @@ def main():
     
     # 메인 분석 페이지
     else:
-        # 입력 섹션 (컴팩트하게 3개 컬럼)
-        col1, col2, col3 = st.columns([1.2, 1, 1])
+        # 1. 파일 업로드 (한 줄)
+        st.markdown("##### 📁 파일 업로드")
+        uploaded_file = st.file_uploader(
+            "Excel 파일을 선택하세요",
+            type=['xlsx'],
+            help="UserChat, Message, Manager data 시트가 포함된 파일",
+            label_visibility="collapsed"
+        )
+        if uploaded_file:
+            st.success(f"✅ 업로드 완료: {uploaded_file.name}")
         
+        # 2. 분석 기간 (한 줄)
+        st.markdown("##### 📅 분석 기간")
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
-            st.markdown("##### 📁 파일 업로드")
-            uploaded_file = st.file_uploader(
-                "",
-                type=['xlsx'],
-                help="UserChat, Message, Manager data 시트 포함",
-                label_visibility="collapsed"
-            )
-            if uploaded_file:
-                st.success(f"✅ {uploaded_file.name}")
-        
-        with col2:
-            st.markdown("##### 📅 분석 기간")
             start_date = st.date_input(
                 "시작일",
-                value=datetime(2025, 7, 1),
-                label_visibility="collapsed"
+                value=datetime(2025, 7, 1)
             )
+        with col2:
             end_date = st.date_input(
                 "종료일", 
-                value=datetime.now() - timedelta(days=1),
+                value=datetime.now() - timedelta(days=1)
+            )
+        with col3:
+            days = (end_date - start_date).days + 1
+            st.metric("분석 일수", f"{days}일")
+        
+        # 3. 인원 설정 (두 줄)
+        st.markdown("##### 👥 인원 설정")
+        
+        # 관리자 (첫 번째 줄)
+        col1, col2 = st.columns([1, 9])
+        with col1:
+            st.markdown("<div class='label-text'>관리자</div>", unsafe_allow_html=True)
+        with col2:
+            managers = st.text_input(
+                "관리자 목록",
+                value="이민주, 이종민, 윤도우리, 김시진, 손진우",
+                placeholder="관리자 이름을 쉼표로 구분하여 입력",
                 label_visibility="collapsed"
             )
-            days = (end_date - start_date).days + 1
-            st.caption(f"분석 기간: {days}일")
         
-        with col3:
-            st.markdown("##### 👥 인원 설정")
-            managers = st.text_area(
-                "관리자",
-                value="이민주, 이종민, 윤도우리, 김시진, 손진우",
-                height=60,
-                label_visibility="collapsed",
-                placeholder="관리자 이름 (쉼표 구분)"
-            )
-            exclusions = st.text_area(
-                "제외",
+        # 제외 인원 (두 번째 줄)
+        col1, col2 = st.columns([1, 9])
+        with col1:
+            st.markdown("<div class='label-text'>제외</div>", unsafe_allow_html=True)
+        with col2:
+            exclusions = st.text_input(
+                "제외 목록",
                 value="채주은, 정용욱, 한승윤, 김종현",
-                height=60,
-                label_visibility="collapsed",
-                placeholder="제외할 이름 (선택)"
+                placeholder="제외할 이름을 쉼표로 구분하여 입력 (선택사항)",
+                label_visibility="collapsed"
             )
         
         # 구분선
