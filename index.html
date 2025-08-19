@@ -781,6 +781,9 @@
 
             log(`📊 병합 결과: 총 ${mergedMessages.length}개 메시지 (관리자: ${managerData.length}, 상담사: ${agentData.length})`);
 
+            // 상세 메시지 내역용으로 원본 데이터 저장
+            window.originalMergedData = mergedMessages;
+
             return { merged: mergedMessages, managers: managerData, agents: agentData };
         }
 
@@ -1115,90 +1118,432 @@
                 
                 const wb = XLSX.utils.book_new();
                 
+                // 스코어보드 시트 (첫 번째 시트)
+                createScoreboardSheet(wb);
+                
                 // 상담사 요약 시트
                 if (analysisResults.agents.summary.length > 0) {
                     const agentWs = XLSX.utils.json_to_sheet(analysisResults.agents.summary);
+                    applyHeaderStyle(agentWs, analysisResults.agents.summary);
+                    setColumnWidths(agentWs, analysisResults.agents.summary);
                     XLSX.utils.book_append_sheet(wb, agentWs, '채팅분석_요약');
+                    log('✅ 채팅분석_요약 시트 생성');
                 }
                 
                 // 상담사 지표 시트
                 if (analysisResults.agents.metrics.length > 0) {
                     const metricsWs = XLSX.utils.json_to_sheet(analysisResults.agents.metrics);
+                    applyHeaderStyle(metricsWs, analysisResults.agents.metrics);
+                    setColumnWidths(metricsWs, analysisResults.agents.metrics);
                     XLSX.utils.book_append_sheet(wb, metricsWs, '채팅분석_지표');
+                    log('✅ 채팅분석_지표 시트 생성');
                 }
                 
                 // 관리자 분석 시트
                 if (analysisResults.managers.summary.length > 0) {
                     const managerWs = XLSX.utils.json_to_sheet(analysisResults.managers.summary);
+                    applyHeaderStyle(managerWs, analysisResults.managers.summary);
+                    setColumnWidths(managerWs, analysisResults.managers.summary);
                     XLSX.utils.book_append_sheet(wb, managerWs, '관리자_분석');
+                    log('✅ 관리자_분석 시트 생성');
                 }
                 
-                // 도움말 시트
-                const helpData = [
-                    {
-                        '구분': '정량 지표',
-                        '지표명': 'HIR (도움 개입률)',
-                        '정의': '전체 참여 상담 중 협업자로 참여한 상담의 비율',
-                        '산식': '협업 참여 상담 건수 ÷ 총 참여 상담 건수'
-                    },
-                    {
-                        '구분': '정량 지표',
-                        '지표명': 'IIF (개입 영향력 계수)',
-                        '정의': '참여한 대화의 길이를 가중치로 반영한 영향력 지수',
-                        '산식': 'Σ(협업 참여한 각 상담의 전체 메시지 수)'
-                    },
-                    {
-                        '구분': '정성 지표',
-                        '지표명': 'CIS (콘텐츠 정보 점수)',
-                        '정의': '핵심 상품 키워드를 포함한 메시지 개수',
-                        '산식': 'Σ(도움 메시지 내 핵심 키워드 포함 개수)'
-                    },
-                    {
-                        '구분': '정성 지표',
-                        '지표명': 'DLS (언어 깊이 점수)',
-                        '정의': '도움 메시지의 평균 글자 길이',
-                        '산식': '도움 메시지 총 글자수 ÷ 도움 메시지 총 개수'
-                    },
-                    {
-                        '구분': '정성 지표',
-                        '지표명': 'ALS (신청서 링크 점수)',
-                        '정의': '신청서 링크 발송 횟수 기반 점수',
-                        '산식': 'Σ(신청서 링크 발송 횟수) × 10점'
-                    },
-                    {
-                        '구분': '정성 점수',
-                        '지표명': '도움 정성 점수',
-                        '정의': '도움 메시지의 희소성과 ALS 보정을 반영한 질적 기여도',
-                        '산식': '기본점수 × (1 + 정규화ALS × 3)'
-                    },
-                    {
-                        '구분': '정성 점수',
-                        '지표명': '담당 정성 점수',
-                        '정의': '담당 메시지의 희소성을 반영한 질적 기여도',
-                        '산식': '기본점수 × 비율조정계수'
-                    },
-                    {
-                        '구분': '정성 점수',
-                        '지표명': '총 정성 점수',
-                        '정의': '도움 정성 점수와 담당 정성 점수의 합계',
-                        '산식': '도움 정성 점수 + 담당 정성 점수'
-                    }
-                ];
+                // 상세 메시지 내역 시트들
+                createDetailMessageSheets(wb);
                 
-                const helpWs = XLSX.utils.json_to_sheet(helpData);
-                XLSX.utils.book_append_sheet(wb, helpWs, '도움말');
+                // 도움말 시트
+                createHelpSheet(wb);
+                log('✅ 도움말 시트 생성');
                 
                 // 파일 다운로드
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '').replace('T', '_');
                 const filename = `SNS센터_채팅분석_결과_${timestamp}.xlsx`;
                 
                 XLSX.writeFile(wb, filename);
-                log(`✅ 결과 파일 다운로드 완료: ${filename}`);
+                log(`📋 최종 엑셀 파일 생성 완료: ${filename}`);
+                log('📊 포함된 시트: 스코어보드, 채팅분석_요약, 채팅분석_지표, 관리자_분석, 상세메시지내역, 도움말');
                 
             } catch (error) {
                 log(`❌ 다운로드 오류: ${error.message}`);
                 alert('결과 파일 생성 중 오류가 발생했습니다.');
             }
+        }
+
+        // 헤더 스타일 적용
+        function applyHeaderStyle(worksheet, data) {
+            if (!data || data.length === 0) return;
+            
+            const columns = Object.keys(data[0]);
+            for (let i = 0; i < columns.length; i++) {
+                const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+                if (!worksheet[cellRef]) continue;
+                
+                // 헤더 스타일 적용
+                worksheet[cellRef].s = {
+                    font: { 
+                        bold: true, 
+                        color: { rgb: "000000" } 
+                    },
+                    fill: { 
+                        patternType: "solid",
+                        fgColor: { rgb: "D3D3D3" } 
+                    },
+                    alignment: {
+                        horizontal: "center",
+                        vertical: "center"
+                    }
+                };
+            }
+        }
+
+        // 컬럼 너비 설정 (최소 120)
+        function setColumnWidths(worksheet, data) {
+            if (!data || data.length === 0) return;
+            
+            const columns = Object.keys(data[0]);
+            const colWidths = [];
+            
+            for (let i = 0; i < columns.length; i++) {
+                const columnName = columns[i];
+                let maxWidth = Math.max(120, columnName.length * 10); // 최소 120, 헤더 길이 고려
+                
+                // 샘플 데이터로 최대 길이 계산 (상위 10개만 확인해서 성능 최적화)
+                const sampleSize = Math.min(10, data.length);
+                for (let j = 0; j < sampleSize; j++) {
+                    const cellValue = String(data[j][columnName] || '');
+                    const cellWidth = cellValue.length * 8 + 20; // 여백 포함
+                    maxWidth = Math.max(maxWidth, cellWidth);
+                }
+                
+                // 최대 너비 제한 (너무 넓어지지 않도록)
+                maxWidth = Math.min(maxWidth, 300);
+                
+                colWidths.push({ width: maxWidth / 7 }); // Excel 단위로 변환
+            }
+            
+            worksheet['!cols'] = colWidths;
+        }
+
+        // 스코어보드 시트 생성
+        function createScoreboardSheet(workbook) {
+            if (!analysisResults.agents.summary.length) return;
+            
+            log('📊 스코어보드 시트 생성 중...');
+            
+            const metrics = [
+                '담당 상담 수', '담당 메시지 수', '담당 글자 수',
+                '도움 상담 수', '도움 메시지 수', '도움 글자 수',
+                '담당 정성 점수', '도움 정성 점수', '총 정성 점수'
+            ];
+            
+            const scoreboardData = [];
+            let currentRow = 0;
+            
+            metrics.forEach(metric => {
+                if (!analysisResults.agents.summary.some(agent => agent[metric] !== undefined)) return;
+                
+                // 정렬된 데이터
+                const sorted = [...analysisResults.agents.summary].sort((a, b) => {
+                    const valueA = parseFloat(a[metric]) || 0;
+                    const valueB = parseFloat(b[metric]) || 0;
+                    return valueB - valueA;
+                });
+                
+                const top5 = sorted.slice(0, 5);
+                const bottom5 = sorted.slice(-5).reverse();
+                
+                // 제목 행
+                scoreboardData.push({
+                    'Top 5': `--- ${metric} 순위 ---`,
+                    '점수': '',
+                    '': '',
+                    'Bottom 5': '',
+                    '점수.1': ''
+                });
+                currentRow++;
+                
+                // 헤더 행
+                scoreboardData.push({
+                    'Top 5': 'Top 5',
+                    '점수': '점수',
+                    '': '',
+                    'Bottom 5': 'Bottom 5',
+                    '점수.1': '점수'
+                });
+                currentRow++;
+                
+                // 데이터 행들
+                for (let i = 0; i < 5; i++) {
+                    scoreboardData.push({
+                        'Top 5': top5[i] ? top5[i].상담사명 : '',
+                        '점수': top5[i] ? top5[i][metric] : '',
+                        '': '',
+                        'Bottom 5': bottom5[i] ? bottom5[i].상담사명 : '',
+                        '점수.1': bottom5[i] ? bottom5[i][metric] : ''
+                    });
+                    currentRow++;
+                }
+                
+                // 빈 행
+                scoreboardData.push({
+                    'Top 5': '',
+                    '점수': '',
+                    '': '',
+                    'Bottom 5': '',
+                    '점수.1': ''
+                });
+                currentRow++;
+            });
+            
+            const scoreboardWs = XLSX.utils.json_to_sheet(scoreboardData);
+            
+            // 스타일 적용
+            applyScoreboardStyles(scoreboardWs, scoreboardData.length);
+            
+            // 컬럼 너비 설정
+            scoreboardWs['!cols'] = [
+                { width: 25 }, // Top 5
+                { width: 15 }, // 점수
+                { width: 5 },  // 빈 열
+                { width: 25 }, // Bottom 5
+                { width: 15 }  // 점수
+            ];
+            
+            XLSX.utils.book_append_sheet(workbook, scoreboardWs, '스코어보드');
+        }
+
+        // 스코어보드 스타일 적용
+        function applyScoreboardStyles(worksheet, totalRows) {
+            // 파란색 스타일 (Top 5)
+            const blueStyle = {
+                fill: { 
+                    patternType: "solid",
+                    fgColor: { rgb: "4472C4" } 
+                },
+                font: { 
+                    bold: true,
+                    color: { rgb: "FFFFFF" } 
+                },
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                }
+            };
+            
+            // 빨간색 스타일 (Bottom 5)
+            const redStyle = {
+                fill: { 
+                    patternType: "solid",
+                    fgColor: { rgb: "C00000" } 
+                },
+                font: { 
+                    bold: true,
+                    color: { rgb: "FFFFFF" } 
+                },
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                }
+            };
+            
+            // 연한 파란색 (Top 5 데이터)
+            const lightBlueStyle = {
+                fill: { 
+                    patternType: "solid",
+                    fgColor: { rgb: "DDEBF7" } 
+                }
+            };
+            
+            // 연한 빨간색 (Bottom 5 데이터)
+            const lightRedStyle = {
+                fill: { 
+                    patternType: "solid",
+                    fgColor: { rgb: "FCE4D6" } 
+                }
+            };
+            
+            let currentRow = 0;
+            const metrics = [
+                '담당 상담 수', '담당 메시지 수', '담당 글자 수',
+                '도움 상담 수', '도움 메시지 수', '도움 글자 수',
+                '담당 정성 점수', '도움 정성 점수', '총 정성 점수'
+            ];
+            
+            metrics.forEach(metric => {
+                if (!analysisResults.agents.summary.some(agent => agent[metric] !== undefined)) return;
+                
+                // 제목 행 건너뛰기
+                currentRow++;
+                
+                // 헤더 행 스타일 적용
+                const headerRow = currentRow;
+                
+                // Top 5 헤더 (파란색)
+                let cellRef = XLSX.utils.encode_cell({ r: headerRow, c: 0 });
+                if (worksheet[cellRef]) worksheet[cellRef].s = blueStyle;
+                cellRef = XLSX.utils.encode_cell({ r: headerRow, c: 1 });
+                if (worksheet[cellRef]) worksheet[cellRef].s = blueStyle;
+                
+                // Bottom 5 헤더 (빨간색)
+                cellRef = XLSX.utils.encode_cell({ r: headerRow, c: 3 });
+                if (worksheet[cellRef]) worksheet[cellRef].s = redStyle;
+                cellRef = XLSX.utils.encode_cell({ r: headerRow, c: 4 });
+                if (worksheet[cellRef]) worksheet[cellRef].s = redStyle;
+                
+                currentRow++;
+                
+                // 데이터 행들 스타일 적용
+                for (let i = 0; i < 5; i++) {
+                    const dataRow = currentRow + i;
+                    
+                    // Top 5 데이터 (연한 파란색)
+                    cellRef = XLSX.utils.encode_cell({ r: dataRow, c: 0 });
+                    if (worksheet[cellRef] && worksheet[cellRef].v) worksheet[cellRef].s = lightBlueStyle;
+                    cellRef = XLSX.utils.encode_cell({ r: dataRow, c: 1 });
+                    if (worksheet[cellRef] && worksheet[cellRef].v) worksheet[cellRef].s = lightBlueStyle;
+                    
+                    // Bottom 5 데이터 (연한 빨간색)
+                    cellRef = XLSX.utils.encode_cell({ r: dataRow, c: 3 });
+                    if (worksheet[cellRef] && worksheet[cellRef].v) worksheet[cellRef].s = lightRedStyle;
+                    cellRef = XLSX.utils.encode_cell({ r: dataRow, c: 4 });
+                    if (worksheet[cellRef] && worksheet[cellRef].v) worksheet[cellRef].s = lightRedStyle;
+                }
+                
+                currentRow += 6; // 5개 데이터 행 + 1개 빈 행
+            });
+        }
+
+        // 상세 메시지 내역 시트들 생성
+        function createDetailMessageSheets(workbook) {
+            if (!window.originalMergedData) {
+                log('⚠️ 원본 메시지 데이터가 없어 상세 내역 시트를 생성할 수 없습니다.');
+                return;
+            }
+            
+            log('📝 상세 메시지 내역 시트 생성 중...');
+            
+            const mergedData = window.originalMergedData;
+            
+            // 필터링된 상담사들의 데이터만 추출
+            const filteredAgentNames = analysisResults.agents.summary.map(agent => agent.상담사명);
+            const agentMessages = mergedData.filter(msg => filteredAgentNames.includes(msg.authorName));
+            
+            // 도움 메시지 (비담당자)
+            const helpMessages = agentMessages.filter(msg => msg.personId !== msg.assigneeId);
+            if (helpMessages.length > 0) {
+                const helpDetailData = helpMessages.map(msg => ({
+                    '상담사명': msg.authorName,
+                    '채팅방 ID': msg.chatId,
+                    '메시지 작성일시': msg.createdAt,
+                    '메시지 원문': msg.plainText
+                }));
+                
+                const helpWs = XLSX.utils.json_to_sheet(helpDetailData);
+                applyHeaderStyle(helpWs, helpDetailData);
+                
+                // 상세 메시지용 특별 컬럼 너비 설정
+                helpWs['!cols'] = [
+                    { width: 20 },  // 상담사명
+                    { width: 25 },  // 채팅방 ID
+                    { width: 20 },  // 메시지 작성일시
+                    { width: 60 }   // 메시지 원문 (더 넓게)
+                ];
+                
+                XLSX.utils.book_append_sheet(workbook, helpWs, '상세 메시지 내역_도움');
+                log(`✅ 도움 메시지 ${helpMessages.length}개 저장`);
+            }
+            
+            // 담당 메시지 (담당자)
+            const assigneeMessages = agentMessages.filter(msg => msg.personId === msg.assigneeId);
+            if (assigneeMessages.length > 0) {
+                const assigneeDetailData = assigneeMessages.map(msg => ({
+                    '상담사명': msg.authorName,
+                    '채팅방 ID': msg.chatId,
+                    '메시지 작성일시': msg.createdAt,
+                    '메시지 원문': msg.plainText
+                }));
+                
+                const assigneeWs = XLSX.utils.json_to_sheet(assigneeDetailData);
+                applyHeaderStyle(assigneeWs, assigneeDetailData);
+                
+                // 상세 메시지용 특별 컬럼 너비 설정
+                assigneeWs['!cols'] = [
+                    { width: 20 },  // 상담사명
+                    { width: 25 },  // 채팅방 ID
+                    { width: 20 },  // 메시지 작성일시
+                    { width: 60 }   // 메시지 원문 (더 넓게)
+                ];
+                
+                XLSX.utils.book_append_sheet(workbook, assigneeWs, '상세 메시지 내역_담당자');
+                log(`✅ 담당 메시지 ${assigneeMessages.length}개 저장`);
+            }
+        }
+
+        // 도움말 시트 생성
+        function createHelpSheet(workbook) {
+            const helpData = [
+                {
+                    '구분': '정량 지표',
+                    '지표명': 'HIR (도움 개입률)',
+                    '정의': '전체 참여 상담 중 협업자로 참여한 상담의 비율',
+                    '산식': '협업 참여 상담 건수 ÷ 총 참여 상담 건수'
+                },
+                {
+                    '구분': '정량 지표',
+                    '지표명': 'IIF (개입 영향력 계수)',
+                    '정의': '참여한 대화의 길이를 가중치로 반영한 영향력 지수',
+                    '산식': 'Σ(협업 참여한 각 상담의 전체 메시지 수)'
+                },
+                {
+                    '구분': '정성 지표',
+                    '지표명': 'CIS (콘텐츠 정보 점수)',
+                    '정의': '핵심 상품 키워드를 포함한 메시지 개수',
+                    '산식': 'Σ(도움 메시지 내 핵심 키워드 포함 개수)'
+                },
+                {
+                    '구분': '정성 지표',
+                    '지표명': 'DLS (언어 깊이 점수)',
+                    '정의': '도움 메시지의 평균 글자 길이',
+                    '산식': '도움 메시지 총 글자수 ÷ 도움 메시지 총 개수'
+                },
+                {
+                    '구분': '정성 지표',
+                    '지표명': 'ALS (신청서 링크 점수)',
+                    '정의': '신청서 링크 발송 횟수 기반 점수',
+                    '산식': 'Σ(신청서 링크 발송 횟수) × 10점'
+                },
+                {
+                    '구분': '정성 점수',
+                    '지표명': '도움 정성 점수',
+                    '정의': '도움 메시지의 희소성과 ALS 보정을 반영한 질적 기여도',
+                    '산식': '기본점수 × (1 + 정규화ALS × 3)'
+                },
+                {
+                    '구분': '정성 점수',
+                    '지표명': '담당 정성 점수',
+                    '정의': '담당 메시지의 희소성을 반영한 질적 기여도',
+                    '산식': '기본점수 × 비율조정계수'
+                },
+                {
+                    '구분': '정성 점수',
+                    '지표명': '총 정성 점수',
+                    '정의': '도움 정성 점수와 담당 정성 점수의 합계',
+                    '산식': '도움 정성 점수 + 담당 정성 점수'
+                }
+            ];
+            
+            const helpWs = XLSX.utils.json_to_sheet(helpData);
+            applyHeaderStyle(helpWs, helpData);
+            
+            // 도움말 시트용 특별 컬럼 너비 설정
+            helpWs['!cols'] = [
+                { width: 15 },  // 구분
+                { width: 25 },  // 지표명
+                { width: 50 },  // 정의 (더 넓게)
+                { width: 45 }   // 산식 (더 넓게)
+            ];
+            
+            XLSX.utils.book_append_sheet(workbook, helpWs, '도움말');
         }
     </script>
 </body>
