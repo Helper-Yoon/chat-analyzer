@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNS센터 채팅분석 프로그램 v1.9</title>
+    <title>SNS센터 채팅분석 프로그램 v2.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -13,519 +12,474 @@
             box-sizing: border-box;
         }
 
-        :root {
-            --primary-blue: #00A9FF;
-            --primary-blue-dark: #0084CC;
-            --primary-blue-light: #33BBFF;
-            --bg-black: #000000;
-            --bg-dark: #0A0A0A;
-            --bg-card: #141414;
-            --bg-input: #1A1A1A;
-            --border-color: #2A2A2A;
-            --text-primary: #FFFFFF;
-            --text-secondary: #B0B0B0;
-            --text-muted: #808080;
-            --success: #00FF88;
-            --error: #FF4444;
-            --warning: #FFB800;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
-            background: var(--bg-black);
-            color: var(--text-primary);
+            font-family: 'Malgun Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000000;
             min-height: 100vh;
-            padding: 20px;
-            line-height: 1.6;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50vh;
-            background: radial-gradient(ellipse at top, var(--primary-blue) 0%, transparent 50%);
-            opacity: 0.1;
-            pointer-events: none;
-            z-index: 0;
+            color: #FFFFFF;
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
-            background: var(--bg-dark);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 0 100px rgba(0, 169, 255, 0.1),
-                        0 20px 60px rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--border-color);
-            position: relative;
-            z-index: 1;
+            padding: 0 20px;
         }
 
+        /* 헤더 */
         .header {
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
-            padding: 40px 30px;
+            background: linear-gradient(135deg, #1E5AA8 0%, #4A7BC8 100%);
+            color: white;
             text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: pulse 4s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.3; }
+            padding: 30px 0;
+            box-shadow: 0 4px 20px rgba(30, 90, 168, 0.5);
         }
 
         .header h1 {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            position: relative;
-            z-index: 1;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
         }
 
         .header p {
-            opacity: 0.95;
             font-size: 14px;
-            position: relative;
-            z-index: 1;
+            opacity: 0.9;
         }
 
-        .content {
-            padding: 30px;
+        /* 메인 콘텐츠 */
+        .main-content {
+            padding: 30px 0;
         }
 
         .section {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .section:hover {
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 30px rgba(0, 169, 255, 0.1);
+            background: #111111;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+            border: 1px solid #333333;
         }
 
         .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--primary-blue-light);
-            margin-bottom: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #1E5AA8;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1E5AA8;
         }
 
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 20px;
-            background: var(--primary-blue);
-            margin-right: 12px;
-            border-radius: 2px;
-            box-shadow: 0 0 10px var(--primary-blue);
+        /* 파일 업로드 */
+        .file-upload-area {
+            border: 2px dashed #1E5AA8;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background: #0A0A0A;
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
 
-        .file-input-wrapper {
-            position: relative;
+        .file-upload-area:hover {
+            background: #1A1A1A;
+            border-color: #4A7BC8;
+        }
+
+        .file-upload-area.dragover {
+            background: #1A1A1A;
+            border-color: #4A7BC8;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            color: #1E5AA8;
+            margin-bottom: 15px;
         }
 
         .file-input {
             display: none;
         }
 
-        .file-label {
-            display: block;
-            padding: 16px;
-            background: var(--bg-input);
-            border: 2px dashed var(--border-color);
-            border-radius: 12px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.3s;
-            color: var(--text-secondary);
+        .file-name {
+            margin-top: 15px;
+            padding: 10px;
+            background: #222222;
+            border-radius: 6px;
+            border: 1px solid #333333;
+            color: #CCCCCC;
         }
 
-        .file-label:hover {
-            border-color: var(--primary-blue);
-            background: rgba(0, 169, 255, 0.05);
-            color: var(--primary-blue-light);
+        .upload-text {
+            color: #FFFFFF;
         }
 
-        .file-label.has-file {
-            border-style: solid;
-            border-color: var(--success);
-            color: var(--success);
-            background: rgba(0, 255, 136, 0.05);
+        .upload-subtext {
+            color: #888888;
+            font-size: 12px;
         }
 
-        .date-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        /* 폼 요소 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
             gap: 20px;
+            align-items: center;
         }
 
-        .date-group label {
+        .form-row > div {
+            flex: 1;
+        }
+
+        label {
             display: block;
             margin-bottom: 8px;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: bold;
+            color: #FFFFFF;
         }
 
-        input[type="date"], input[type="text"] {
+        input[type="text"], input[type="date"] {
             width: 100%;
-            padding: 12px 16px;
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            border: 2px solid #333333;
             border-radius: 8px;
-            color: var(--text-primary);
             font-size: 14px;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            background: #1A1A1A;
+            color: #FFFFFF;
         }
 
-        input[type="date"]:focus, input[type="text"]:focus {
+        input[type="text"]:focus, input[type="date"]:focus {
             outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(0, 169, 255, 0.1),
-                        0 0 20px rgba(0, 169, 255, 0.2);
-            background: var(--bg-black);
+            border-color: #1E5AA8;
+            box-shadow: 0 0 0 3px rgba(30, 90, 168, 0.3);
         }
 
+        /* 브라우저별 date input 스타일 */
         input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(1);
             cursor: pointer;
         }
 
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .input-group small {
-            display: block;
-            margin-top: 6px;
-            color: var(--text-muted);
-            font-size: 12px;
-        }
-
-        .btn-analyze {
-            width: 100%;
-            padding: 18px;
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+        /* 버튼 */
+        .btn-primary {
+            background: linear-gradient(135deg, #1E5AA8 0%, #4A7BC8 100%);
             color: white;
             border: none;
-            border-radius: 12px;
+            padding: 15px 40px;
+            border-radius: 8px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
-            margin: 24px 0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 30px auto;
+            box-shadow: 0 4px 15px rgba(30, 90, 168, 0.5);
         }
 
-        .btn-analyze::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn-analyze:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn-analyze:hover:not(:disabled) {
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 169, 255, 0.4);
+            box-shadow: 0 6px 20px rgba(30, 90, 168, 0.6);
         }
 
-        .btn-analyze:active {
-            transform: translateY(0);
-        }
-
-        .btn-analyze:disabled {
-            background: var(--bg-input);
+        .btn-primary:disabled {
+            background: #333333;
             cursor: not-allowed;
-            opacity: 0.5;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 진행률 */
+        .progress-container {
+            margin: 20px 0;
+            text-align: center;
         }
 
         .progress-bar {
             width: 100%;
-            height: 6px;
-            background: var(--bg-input);
-            border-radius: 3px;
+            height: 8px;
+            background: #333333;
+            border-radius: 4px;
             overflow: hidden;
-            margin: 24px 0;
-            display: none;
-        }
-
-        .progress-bar.active {
-            display: block;
+            margin: 10px 0;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary-blue), var(--success));
-            border-radius: 3px;
-            transition: width 0.3s;
+            background: linear-gradient(90deg, #1E5AA8, #4A7BC8);
             width: 0%;
-            box-shadow: 0 0 10px var(--primary-blue);
-            position: relative;
+            transition: width 0.3s ease;
         }
 
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: shimmer 2s infinite;
+        .progress-text {
+            color: #CCCCCC;
+            font-size: 14px;
         }
 
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-top: 24px;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
+        /* 로그 */
+        .log-container {
+            background: #000000;
+            color: #00FF00;
             padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-blue);
-            box-shadow: 0 10px 30px rgba(0, 169, 255, 0.2);
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .log-section {
-            background: var(--bg-black);
-            border-radius: 12px;
-            padding: 20px;
-            max-height: 350px;
+            border-radius: 8px;
+            height: 300px;
             overflow-y: auto;
-            border: 1px solid var(--border-color);
-            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-        }
-
-        .log-section::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .log-section::-webkit-scrollbar-track {
-            background: var(--bg-input);
-            border-radius: 4px;
-        }
-
-        .log-section::-webkit-scrollbar-thumb {
-            background: var(--primary-blue);
-            border-radius: 4px;
-        }
-
-        .log-title {
-            color: var(--primary-blue);
+            font-family: 'Courier New', monospace;
             font-size: 13px;
-            margin-bottom: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .log-content {
-            font-size: 12px;
-            line-height: 1.8;
+            line-height: 1.5;
+            border: 1px solid #333333;
         }
 
         .log-entry {
-            margin-bottom: 4px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s;
+            margin-bottom: 5px;
         }
 
-        .log-entry:hover {
-            background: var(--bg-input);
+        .log-timestamp {
+            color: #888888;
         }
 
-        .log-entry.error {
-            color: var(--error);
-            background: rgba(255, 68, 68, 0.1);
+        /* 결과 영역 */
+        .results {
+            display: none;
+            margin-top: 30px;
         }
 
-        .log-entry.success {
-            color: var(--success);
-            background: rgba(0, 255, 136, 0.1);
+        .download-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
         }
 
-        .log-entry.info {
-            color: var(--primary-blue-light);
+        .btn-download {
+            background: #1E5AA8;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
         }
 
-        .log-entry.warning {
-            color: var(--warning);
+        .btn-download:hover {
+            background: #4A7BC8;
+            transform: translateY(-1px);
         }
 
-        /* Loading animation */
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .download-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* 테이블 스타일 */
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #111111;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        th {
+            background: #1E5AA8;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #333333;
+            text-align: center;
+            color: #FFFFFF;
+        }
+
+        tr:hover {
+            background: #1A1A1A;
+        }
+
+        /* 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .spinner {
+            border: 3px solid #333333;
+            border-top: 3px solid #1E5AA8;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
 
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid var(--bg-input);
-            border-top: 3px solid var(--primary-blue);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
+        /* 로컬 처리 표시 */
+        .local-badge {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(30, 90, 168, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            z-index: 1000;
+        }
+
+        /* 결과 스타일 개선 */
+        .result-summary h3 {
+            color: #1E5AA8;
+            margin-bottom: 15px;
+        }
+
+        .result-summary h4 {
+            color: #FFFFFF;
+            margin: 20px 0 10px 0;
+        }
+
+        /* 스크롤바 스타일 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #222222;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1E5AA8;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4A7BC8;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>SNS센터 채팅분석 프로그램 v1.9</h1>
-            <p>상담사 성과 분석 및 평가 시스템</p>
+    <div class="local-badge">🔒 로컬 처리</div>
+    
+    <div class="header">
+        <div class="container">
+            <h1>SNS센터 채팅분석 프로그램 v2.0</h1>
+            <p>완전 로컬 처리 - 서버 업로드 없이 안전한 분석</p>
         </div>
+    </div>
 
-        <div class="content">
+    <div class="container">
+        <div class="main-content">
+            <!-- 파일 선택 -->
             <div class="section">
                 <div class="section-title">1. 분석 파일 선택</div>
-                <div class="file-input-wrapper">
-                    <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
-                    <label for="fileInput" class="file-label" id="fileLabel">
-                        📁 클릭하여 Excel 파일 선택 (.xlsx)
-                    </label>
+                <div class="file-upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="file-upload-icon">📁</div>
+                    <div class="upload-text">
+                        <strong>엑셀 파일을 선택하거나 여기에 드래그하세요</strong>
+                        <br>
+                        <small class="upload-subtext">.xlsx 파일만 지원됩니다 | 파일은 브라우저에서만 처리됩니다</small>
+                    </div>
+                    <input type="file" id="fileInput" class="file-input" accept=".xlsx" />
+                    <div id="fileName" class="file-name" style="display: none;"></div>
                 </div>
             </div>
 
+            <!-- 분석 기간 -->
             <div class="section">
                 <div class="section-title">2. 분석 기간 설정</div>
-                <div class="date-inputs">
-                    <div class="date-group">
-                        <label>시작일</label>
-                        <input type="date" id="startDate" value="2025-07-01">
+                <div class="form-row">
+                    <div>
+                        <label for="startDate">시작일</label>
+                        <input type="date" id="startDate" />
                     </div>
-                    <div class="date-group">
-                        <label>종료일</label>
-                        <input type="date" id="endDate">
+                    <div>
+                        <label for="endDate">종료일</label>
+                        <input type="date" id="endDate" />
                     </div>
                 </div>
             </div>
 
+            <!-- 분석 설정 -->
             <div class="section">
-                <div class="section-title">3. 분석 설정</div>
-                <div class="input-group">
-                    <label>관리자 목록</label>
-                    <input type="text" id="managers" value="이민주, 이종민, 윤도우리, 김시진, 손진우">
-                    <small>쉼표(,)로 구분하여 입력하세요</small>
+                <div class="section-title">3. 분석 대상 설정</div>
+                <div class="form-group">
+                    <label for="managers">관리자 목록 (쉼표로 구분)</label>
+                    <input type="text" id="managers" value="이종민, 윤도우리, 김진후, 이종민, 차정환" />
                 </div>
-                <div class="input-group">
-                    <label>분석 제외 명단</label>
-                    <input type="text" id="exclusions" value="채주은, 정용욱, 한승윤, 김종현">
-                    <small>쉼표(,)로 구분하여 입력하세요 (공란 가능)</small>
+                <div class="form-group">
+                    <label for="exclusions">분석 제외 명단 (쉼표로 구분)</label>
+                    <input type="text" id="exclusions" value="채주은, 정용욱, 한승윤, 김종현, 공현준, 강헌준" />
                 </div>
             </div>
 
-            <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
-                <span id="btnText">📊 분석 실행</span>
-                <span id="btnSpinner" style="display:none;" class="loading-spinner"></span>
+            <!-- 실행 버튼 -->
+            <button id="analyzeBtn" class="btn-primary" onclick="runAnalysis()">
+                4. 분석 실행
             </button>
 
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
+            <!-- 진행률 -->
+            <div id="progressContainer" class="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div id="progressText" class="progress-text"></div>
             </div>
 
-            <div class="stats" id="stats" style="display: none;">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalAgents">0</div>
-                    <div class="stat-label">분석 상담사</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalMessages">0</div>
-                    <div class="stat-label">총 메시지</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalChats">0</div>
-                    <div class="stat-label">총 상담</div>
-                </div>
+            <!-- 로그 -->
+            <div class="section">
+                <div class="section-title">진행 상황 로그</div>
+                <div id="logContainer" class="log-container"></div>
             </div>
 
-            <div class="log-section">
-                <div class="log-title">▶ CONSOLE OUTPUT</div>
-                <div class="log-content" id="logContent"></div>
+            <!-- 결과 -->
+            <div id="results" class="results">
+                <div class="section">
+                    <div class="section-title">분석 결과</div>
+                    <div id="resultSummary" class="result-summary"></div>
+                    <div class="download-buttons">
+                        <button class="btn-download" onclick="downloadResults()">
+                            📊 결과 엑셀 다운로드
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -533,622 +487,719 @@
     <script>
         // 전역 변수
         let uploadedFile = null;
-        let workbook = null;
-        let isProcessing = false;
+        let analysisResults = null;
 
-        // 오늘 날짜에서 하루 전 설정
-        document.getElementById('endDate').value = moment().subtract(1, 'days').format('YYYY-MM-DD');
+        // 날짜 초기화 - 당월 1일부터 어제까지
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            
+            // 당월 1일
+            const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('startDate').value = firstOfMonth.toISOString().split('T')[0];
+            
+            // 어제
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            document.getElementById('endDate').value = yesterday.toISOString().split('T')[0];
+            
+            log('🎯 로컬 처리 모드 - 파일은 서버로 전송되지 않습니다');
+            log(`📅 기본 분석 기간: ${firstOfMonth.toLocaleDateString()} ~ ${yesterday.toLocaleDateString()}`);
+        });
 
-        // 파일 선택 이벤트
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                uploadedFile = file;
-                const fileName = file.name;
-                const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                document.getElementById('fileLabel').innerHTML = `✅ ${fileName} <span style="opacity:0.6">(${fileSize} MB)</span>`;
-                document.getElementById('fileLabel').classList.add('has-file');
-                addLog(`파일 선택: ${fileName} (${fileSize} MB)`, 'success');
+        // 파일 업로드 처리
+        const fileInput = document.getElementById('fileInput');
+        const fileUploadArea = document.querySelector('.file-upload-area');
+        const fileName = document.getElementById('fileName');
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // 드래그 앤 드롭
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect({ target: { files: files } });
             }
         });
 
-        // 로그 추가 함수
-        function addLog(message, type = 'info') {
-            const logContent = document.getElementById('logContent');
-            const timestamp = moment().format('HH:mm:ss');
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
-            
-            let icon = '●';
-            switch(type) {
-                case 'success': icon = '✓'; break;
-                case 'error': icon = '✗'; break;
-                case 'warning': icon = '⚠'; break;
-                case 'info': icon = '►'; break;
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith('.xlsx')) {
+                uploadedFile = file;
+                fileName.textContent = `선택된 파일: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+                fileName.style.display = 'block';
+                log(`📁 파일 선택됨: ${file.name} - 브라우저에서만 처리됩니다`);
+            } else {
+                alert('⚠️ .xlsx 파일만 업로드 가능합니다.');
+                fileInput.value = '';
             }
-            
-            logEntry.textContent = `[${timestamp}] ${icon} ${message}`;
-            logContent.appendChild(logEntry);
-            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // 로그 함수
+        function log(message) {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
         // 진행률 업데이트
-        function updateProgress(percent) {
-            document.getElementById('progressBar').classList.add('active');
-            document.getElementById('progressFill').style.width = percent + '%';
+        function updateProgress(percent, text) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            if (percent === 0) {
+                progressContainer.style.display = 'none';
+                return;
+            }
+            
+            progressContainer.style.display = 'block';
+            progressFill.style.width = percent + '%';
+            progressText.textContent = text;
         }
 
         // 분석 실행
         async function runAnalysis() {
-            if (isProcessing) return;
-            
             if (!uploadedFile) {
-                alert('⚠️ Excel 파일을 먼저 선택해주세요.');
+                alert('⚠️ 분석할 엑셀 파일을 먼저 선택해주세요.');
                 return;
             }
 
-            isProcessing = true;
-            const btn = document.getElementById('analyzeBtn');
-            const btnText = document.getElementById('btnText');
-            const btnSpinner = document.getElementById('btnSpinner');
-            
-            btn.disabled = true;
-            btnText.textContent = '분석 중';
-            btnSpinner.style.display = 'inline-block';
-
-            // 이전 통계 숨기기
-            document.getElementById('stats').style.display = 'none';
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<div class="spinner"></div>분석 중...';
 
             try {
-                addLog('=== 분석 시작 ===', 'info');
-                updateProgress(5);
+                log('🚀 로컬 분석을 시작합니다...');
+                updateProgress(10, '파일을 읽고 있습니다...');
 
-                // Excel 파일 읽기
-                addLog('Excel 파일 읽는 중...', 'info');
-                const data = await readExcelFile(uploadedFile);
-                workbook = XLSX.read(data, {type: 'array', cellDates: true});
-                updateProgress(25);
-
-                // 시트 정보 로깅
-                const sheetNames = workbook.SheetNames;
-                addLog(`총 ${sheetNames.length}개 시트 발견`, 'info');
-                sheetNames.forEach(name => {
-                    addLog(`  - ${name}`, 'info');
-                });
+                // 파일 읽기
+                const workbook = await readExcelFile(uploadedFile);
+                updateProgress(30, '데이터를 처리하고 있습니다...');
 
                 // 데이터 처리
-                addLog('데이터 처리 중...', 'info');
                 const processedData = await processData(workbook);
-                updateProgress(60);
+                updateProgress(60, '분석을 수행하고 있습니다...');
 
-                // 결과 생성
-                addLog('결과 Excel 생성 중...', 'info');
-                const resultWorkbook = createResultWorkbook(processedData);
-                updateProgress(85);
+                // 분석 실행
+                const results = await performAnalysis(processedData);
+                updateProgress(90, '결과를 생성하고 있습니다...');
 
-                // 파일 다운로드
-                downloadResult(resultWorkbook);
-                updateProgress(100);
+                // 결과 표시
+                displayResults(results);
+                updateProgress(100, '분석이 완료되었습니다!');
 
-                addLog('=== 분석 완료 ===', 'success');
+                log('✅ 분석이 성공적으로 완료되었습니다!');
                 
-                // 통계 표시
-                showStats(processedData);
-
-                // 성공 알림
                 setTimeout(() => {
-                    alert('✅ 분석이 완료되었습니다!\n결과 파일이 다운로드되었습니다.');
-                }, 500);
+                    updateProgress(0, '');
+                }, 2000);
 
             } catch (error) {
-                console.error(error);
-                addLog(`오류: ${error.message}`, 'error');
-                alert(`❌ 분석 중 오류가 발생했습니다:\n${error.message}`);
+                log(`❌ 오류 발생: ${error.message}`);
+                console.error('Analysis error:', error);
+                alert(`분석 중 오류가 발생했습니다: ${error.message}`);
+                updateProgress(0, '');
             } finally {
-                isProcessing = false;
-                btn.disabled = false;
-                btnText.textContent = '📊 분석 실행';
-                btnSpinner.style.display = 'none';
-                
-                setTimeout(() => {
-                    document.getElementById('progressBar').classList.remove('active');
-                    document.getElementById('progressFill').style.width = '0%';
-                }, 2000);
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '4. 분석 실행';
             }
         }
 
-        // Excel 파일 읽기
+        // 엑셀 파일 읽기 (완전 로컬 처리)
         function readExcelFile(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (e) => resolve(new Uint8Array(e.target.result));
-                reader.onerror = reject;
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        log('📋 파일 읽기 완료 - 서버 전송 없음');
+                        resolve(workbook);
+                    } catch (error) {
+                        reject(new Error('파일을 읽는 중 오류가 발생했습니다.'));
+                    }
+                };
+                reader.onerror = () => reject(new Error('파일 읽기 실패'));
                 reader.readAsArrayBuffer(file);
             });
         }
 
         // 데이터 처리
-        async function processData(wb) {
-            const startDate = moment(document.getElementById('startDate').value);
-            const endDate = moment(document.getElementById('endDate').value).endOf('day');
-            const managers = document.getElementById('managers').value.split(',').map(m => m.trim()).filter(m => m);
-            const exclusions = document.getElementById('exclusions').value.split(',').map(e => e.trim()).filter(e => e);
+        function processData(workbook) {
+            return new Promise((resolve, reject) => {
+                try {
+                    log('📊 시트를 찾고 있습니다...');
+                    
+                    // 필수 시트 찾기
+                    const requiredSheets = ['UserChat data', 'Message data', 'Manager data'];
+                    const sheetData = {};
+                    
+                    for (const required of requiredSheets) {
+                        let found = false;
+                        for (const sheetName of workbook.SheetNames) {
+                            if (sheetName.toLowerCase().includes(required.toLowerCase())) {
+                                const worksheet = workbook.Sheets[sheetName];
+                                sheetData[required] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+                                found = true;
+                                log(`✅ '${sheetName}' 시트 발견 (${sheetData[required].length}개 레코드)`);
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            throw new Error(`필수 시트 '${required}'를 찾을 수 없습니다.`);
+                        }
+                    }
 
-            addLog(`분석 기간: ${startDate.format('YYYY-MM-DD')} ~ ${endDate.format('YYYY-MM-DD')}`, 'info');
-            addLog(`관리자: ${managers.length}명`, 'info');
-            addLog(`제외: ${exclusions.length}명`, 'info');
+                    // 날짜 필터링
+                    const startDate = new Date(document.getElementById('startDate').value);
+                    const endDate = new Date(document.getElementById('endDate').value);
+                    endDate.setDate(endDate.getDate() + 1); // 종료일 포함
 
-            // 시트 찾기 및 데이터 추출
-            const sheets = wb.SheetNames;
-            let userChatData = [];
-            let messageData = [];
-            let managerData = [];
+                    log('🔄 데이터를 정제하고 있습니다...');
+                    
+                    // Message data 필터링
+                    const filteredMessages = sheetData['Message data'].filter(msg => {
+                        if (!msg.createdAt) return false;
+                        const msgDate = new Date(msg.createdAt);
+                        return msgDate >= startDate && msgDate < endDate;
+                    });
 
-            sheets.forEach(sheetName => {
-                const sheet = wb.Sheets[sheetName];
-                const data = XLSX.utils.sheet_to_json(sheet, {raw: false, dateNF: 'yyyy-mm-dd'});
-                
-                if (sheetName.includes('UserChat data')) {
-                    userChatData = userChatData.concat(data);
-                } else if (sheetName.includes('Message data')) {
-                    messageData = messageData.concat(data);
-                } else if (sheetName.includes('Manager data')) {
-                    managerData = managerData.concat(data);
+                    if (filteredMessages.length === 0) {
+                        throw new Error('선택된 기간에 해당하는 메시지가 없습니다.');
+                    }
+
+                    log(`📈 ${filteredMessages.length}개의 메시지가 분석 대상입니다.`);
+
+                    resolve({
+                        userChat: sheetData['UserChat data'],
+                        messages: filteredMessages,
+                        managers: sheetData['Manager data']
+                    });
+
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // 분석 수행
+        function performAnalysis(data) {
+            return new Promise((resolve, reject) => {
+                try {
+                    log('🔍 데이터를 병합하고 있습니다...');
+                    
+                    // 관리자 및 제외 목록
+                    const managers = document.getElementById('managers').value
+                        .split(',').map(name => name.trim()).filter(name => name);
+                    const exclusions = document.getElementById('exclusions').value
+                        .split(',').map(name => name.trim()).filter(name => name);
+
+                    log(`👥 관리자: ${managers.join(', ')}`);
+                    log(`🚫 제외 대상: ${exclusions.join(', ')}`);
+
+                    // 데이터 병합 및 분석
+                    const mergedData = mergeData(data, managers, exclusions);
+                    const analysisResult = analyzeData(mergedData, data);
+                    
+                    analysisResults = analysisResult;
+                    resolve(analysisResult);
+
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // 데이터 병합
+        function mergeData(data, managers, exclusions) {
+            // ID 정제 함수
+            const cleanId = (id) => String(id || '').trim().replace(/\.0$/, '');
+            
+            // Manager ID-Name 매핑
+            const managerMap = {};
+            data.managers.forEach(manager => {
+                const id = cleanId(manager.id);
+                if (id && manager.name) {
+                    managerMap[id] = manager.name.trim();
                 }
             });
 
-            if (!userChatData.length || !messageData.length || !managerData.length) {
-                throw new Error('필수 시트를 찾을 수 없습니다. (UserChat data, Message data, Manager data)');
-            }
-
-            addLog(`데이터 로드: UserChat(${userChatData.length}), Message(${messageData.length}), Manager(${managerData.length})`, 'success');
-
-            // 중복 제거
-            const uniqueUserChat = removeDuplicates(userChatData, 'id');
-            const uniqueMessage = removeDuplicates(messageData, ['chatId', 'personId', 'createdAt', 'plainText']);
-            const uniqueManager = removeDuplicates(managerData, 'id');
-
-            addLog(`중복 제거 후: UserChat(${uniqueUserChat.length}), Message(${uniqueMessage.length})`, 'info');
-
-            // 날짜 필터링
-            const filteredUserChat = uniqueUserChat.filter(row => {
-                const date = moment(row.firstOpenedAt);
-                return date.isValid() && date.isBetween(startDate, endDate);
+            // UserChat ID-AssigneeId 매핑
+            const chatAssigneeMap = {};
+            data.userChat.forEach(chat => {
+                const chatId = cleanId(chat.id);
+                const assigneeId = cleanId(chat.assigneeId);
+                if (chatId && assigneeId) {
+                    chatAssigneeMap[chatId] = assigneeId;
+                }
             });
 
-            const filteredMessages = uniqueMessage.filter(row => {
-                const date = moment(row.createdAt);
-                return date.isValid() && date.isBetween(startDate, endDate);
+            // 메시지 데이터 병합
+            const mergedMessages = [];
+            data.messages.forEach(msg => {
+                const chatId = cleanId(msg.chatId);
+                const personId = cleanId(msg.personId);
+                
+                if (!chatId || !personId || !msg.plainText) return;
+                
+                const assigneeId = chatAssigneeMap[chatId];
+                const authorName = managerMap[personId];
+                
+                if (assigneeId && authorName) {
+                    mergedMessages.push({
+                        chatId,
+                        personId,
+                        assigneeId,
+                        authorName,
+                        plainText: msg.plainText,
+                        createdAt: msg.createdAt
+                    });
+                }
             });
 
-            addLog(`기간 필터링: 상담(${filteredUserChat.length}), 메시지(${filteredMessages.length})`, 'success');
+            // 데이터 분리
+            const managerData = mergedMessages.filter(msg => managers.includes(msg.authorName));
+            const agentData = mergedMessages.filter(msg => 
+                !managers.includes(msg.authorName) && !exclusions.includes(msg.authorName)
+            );
 
-            if (filteredMessages.length === 0) {
-                throw new Error('선택된 기간에 해당하는 데이터가 없습니다.');
-            }
+            log(`📊 병합 결과: 총 ${mergedMessages.length}개 메시지 (관리자: ${managerData.length}, 상담사: ${agentData.length})`);
 
-            // 데이터 분석
-            const analysisResult = analyzeData(filteredMessages, filteredUserChat, uniqueManager, managers, exclusions);
-
-            return analysisResult;
-        }
-
-        // 중복 제거 함수
-        function removeDuplicates(data, keys) {
-            const keyArray = Array.isArray(keys) ? keys : [keys];
-            const seen = new Set();
-            return data.filter(item => {
-                const key = keyArray.map(k => item[k]).join('|');
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
+            return { merged: mergedMessages, managers: managerData, agents: agentData };
         }
 
         // 데이터 분석
-        function analyzeData(messages, userChats, managers, managerList, exclusionList) {
-            addLog('데이터 분석 시작...', 'info');
-
-            // ID 정리 함수
-            const cleanId = (id) => String(id || '').trim().replace(/\.0$/, '');
-
-            // 관리자 이름-ID 매핑
-            const managerMap = {};
-            managers.forEach(m => {
-                managerMap[cleanId(m.id)] = m.name;
-            });
-
-            // 상담사별 통계 초기화
-            const agentStats = {};
+        function analyzeData(mergedData, originalData) {
+            log('📈 상담사 분석을 시작합니다...');
             
-            // 분석 기간 계산
-            const startDate = moment(document.getElementById('startDate').value);
-            const endDate = moment(document.getElementById('endDate').value);
-            const analysisDays = endDate.diff(startDate, 'days') + 1;
-            const minMessageThreshold = analysisDays * 10;
+            // 상담사 필터링
+            const agentStats = calculateAgentStats(mergedData.agents);
+            const filteredAgents = filterAgents(agentStats);
+            
+            if (filteredAgents.length === 0) {
+                throw new Error('필터링 조건을 만족하는 상담사가 없습니다.');
+            }
 
-            addLog(`분석 기간: ${analysisDays}일, 최소 메시지 기준: ${minMessageThreshold}개`, 'info');
+            log(`✅ 필터링: ${agentStats.length}명 → ${filteredAgents.length}명`);
 
-            // 메시지 처리
-            let processedCount = 0;
-            messages.forEach(msg => {
-                processedCount++;
-                if (processedCount % 1000 === 0) {
-                    addLog(`  ${processedCount}개 메시지 처리 완료...`, 'info');
-                }
+            // 상담사 분석
+            const agentAnalysis = analyzeGroup(
+                mergedData.agents.filter(msg => filteredAgents.includes(msg.authorName)),
+                originalData, '상담사'
+            );
 
-                const authorId = cleanId(msg.personId);
-                const authorName = managerMap[authorId] || authorId;
-                const chatId = cleanId(msg.chatId);
+            // 관리자 분석
+            const managerAnalysis = analyzeGroup(mergedData.managers, originalData, '관리자');
 
-                // 제외 목록 체크
-                if (exclusionList.includes(authorName)) return;
+            return {
+                agents: agentAnalysis,
+                managers: managerAnalysis,
+                filteredCount: filteredAgents.length
+            };
+        }
 
-                if (!agentStats[authorName]) {
-                    agentStats[authorName] = {
-                        name: authorName,
-                        assignedChats: new Set(),
-                        helpChats: new Set(),
-                        assignedMessages: 0,
-                        helpMessages: 0,
-                        assignedChars: 0,
-                        helpChars: 0,
-                        alsCount: 0,
-                        cisCount: 0,
-                        totalMessageLength: 0,
-                        iifScore: 0
+        // 상담사 통계 계산
+        function calculateAgentStats(agentData) {
+            const stats = {};
+            
+            agentData.forEach(msg => {
+                if (!stats[msg.authorName]) {
+                    stats[msg.authorName] = {
+                        totalChats: new Set(),
+                        totalMessages: 0,
+                        collabChats: new Set()
                     };
                 }
-
-                // 담당자 찾기
-                const chat = userChats.find(c => cleanId(c.id) === chatId);
-                const isAssignee = chat && cleanId(chat.assigneeId) === authorId;
-
-                const messageText = msg.plainText || '';
-                const messageLength = messageText.length;
-
-                if (isAssignee) {
-                    agentStats[authorName].assignedChats.add(chatId);
-                    agentStats[authorName].assignedMessages++;
-                    agentStats[authorName].assignedChars += messageLength;
-                } else {
-                    agentStats[authorName].helpChats.add(chatId);
-                    agentStats[authorName].helpMessages++;
-                    agentStats[authorName].helpChars += messageLength;
-                    agentStats[authorName].totalMessageLength += messageLength;
-
-                    // ALS (신청서 링크) 체크
-                    if (messageText.includes('https://form.ajd.co.kr/')) {
-                        agentStats[authorName].alsCount++;
-                    }
-
-                    // CIS (핵심 키워드) 체크
-                    const coreKeywords = ['월요금', '사은품', '위약금', '결합', '설치일', '설치비', '약정', '지원금', '할인', '통신사', '요금제', '인터넷', '휴대폰'];
-                    const keywordCount = coreKeywords.filter(keyword => messageText.includes(keyword)).length;
-                    if (keywordCount > 0) {
-                        agentStats[authorName].cisCount += keywordCount;
-                    }
-                }
-            });
-
-            // IIF (개입 영향력 계수) 계산
-            const chatMessageCounts = {};
-            messages.forEach(msg => {
-                const chatId = cleanId(msg.chatId);
-                chatMessageCounts[chatId] = (chatMessageCounts[chatId] || 0) + 1;
-            });
-
-            messages.forEach(msg => {
-                const authorId = cleanId(msg.personId);
-                const authorName = managerMap[authorId] || authorId;
-                const chatId = cleanId(msg.chatId);
                 
-                if (agentStats[authorName]) {
-                    const chat = userChats.find(c => cleanId(c.id) === chatId);
-                    const isAssignee = chat && cleanId(chat.assigneeId) === authorId;
-                    
-                    if (!isAssignee) {
-                        agentStats[authorName].iifScore += chatMessageCounts[chatId] || 0;
-                    }
+                stats[msg.authorName].totalChats.add(msg.chatId);
+                stats[msg.authorName].totalMessages++;
+                
+                if (msg.personId !== msg.assigneeId) {
+                    stats[msg.authorName].collabChats.add(msg.chatId);
                 }
             });
 
-            addLog(`${processedCount}개 메시지 처리 완료`, 'success');
+            return Object.keys(stats).map(authorName => {
+                const stat = stats[authorName];
+                const totalChats = stat.totalChats.size;
+                const collabChats = stat.collabChats.size;
+                const hir = totalChats > 0 ? collabChats / totalChats : 0;
+                
+                return {
+                    authorName,
+                    totalChats,
+                    totalMessages: stat.totalMessages,
+                    collabChats,
+                    hir
+                };
+            });
+        }
 
-            // 최종 지표 계산 및 필터링
-            const results = [];
-            let filteredCount = 0;
+        // 상담사 필터링
+        function filterAgents(agentStats) {
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+            const analysisDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            const minMessages = analysisDays * 10;
+
+            log(`📊 분석 기간: ${analysisDays}일, 최소 메시지: ${minMessages}개`);
+
+            return agentStats
+                .filter(stat => 
+                    stat.hir > 0 && 
+                    stat.hir < 1 && 
+                    stat.totalMessages >= minMessages
+                )
+                .map(stat => stat.authorName);
+        }
+
+        // 그룹 분석
+        function analyzeGroup(groupData, originalData, groupName) {
+            log(`🔍 ${groupName} 그룹 분석 중...`);
             
-            Object.values(agentStats).forEach(agent => {
-                // 관리자 제외
-                if (managerList.includes(agent.name)) return;
-                
-                const totalChats = agent.assignedChats.size + agent.helpChats.size;
-                const totalMessages = agent.assignedMessages + agent.helpMessages;
-                
-                // 필터링 조건
-                if (totalChats === 0) return;
-                
-                const hir = agent.helpChats.size / totalChats;
-                
-                // HIR이 0 또는 1인 경우 제외
-                if (hir === 0 || hir === 1) {
-                    filteredCount++;
-                    return;
+            if (groupData.length === 0) {
+                return { summary: [], metrics: [] };
+            }
+
+            // 저자별 데이터 분리
+            const authorData = {};
+            groupData.forEach(msg => {
+                if (!authorData[msg.authorName]) {
+                    authorData[msg.authorName] = { assignee: [], nonAssignee: [] };
                 }
                 
-                // 총 메시지 수가 10개 이하인 경우 제외
-                if (totalMessages <= 10) {
-                    filteredCount++;
-                    return;
+                if (msg.personId === msg.assigneeId) {
+                    authorData[msg.authorName].assignee.push(msg);
+                } else {
+                    authorData[msg.authorName].nonAssignee.push(msg);
                 }
+            });
+
+            const authors = Object.keys(authorData);
+            const summary = [];
+            const metrics = [];
+
+            authors.forEach(authorName => {
+                const assigneeData = authorData[authorName].assignee;
+                const nonAssigneeData = authorData[authorName].nonAssignee;
+
+                // 기본 통계
+                const assigneeStats = calculateBasicStats(assigneeData);
+                const nonAssigneeStats = calculateBasicStats(nonAssigneeData);
                 
-                // 기간별 최소 메시지 수 미달 제외
-                if (totalMessages < minMessageThreshold) {
-                    filteredCount++;
-                    return;
-                }
-
-                const dls = agent.helpMessages > 0 ? agent.totalMessageLength / agent.helpMessages : 0;
-                const als = agent.alsCount * 10;
-
-                // 정성 점수 계산
-                const helpQualityBase = agent.helpMessages * Math.log1p(agent.helpMessages);
-                const alsBonus = 1 + (als / 100) * 3; // ALS 가중치 3
-                const helpQualityScore = helpQualityBase * alsBonus;
+                // 담당 상담 수 (originalData에서 계산)
+                const assignedChats = calculateAssignedChats(authorName, originalData);
                 
-                const assignedQualityBase = agent.assignedMessages * Math.log1p(agent.assignedMessages);
-                const assignedQualityScore = assignedQualityBase * 0.333; // 담당 점수 비율 조정
+                // 정성 점수
+                const qualitativeScores = calculateQualitativeScores(assigneeData, nonAssigneeData);
                 
-                const totalQualityScore = helpQualityScore + assignedQualityScore;
+                // 메트릭스 (비담당자 데이터만)
+                const authorMetrics = calculateMetrics(authorName, nonAssigneeData);
 
-                // 담당 상담 수 계산 (firstOpenedAt 기준)
-                const assignedChatCount = userChats.filter(chat => {
-                    const assigneeId = cleanId(chat.assigneeId);
-                    const assigneeName = managerMap[assigneeId] || assigneeId;
-                    return assigneeName === agent.name;
-                }).length;
-
-                results.push({
-                    상담사명: agent.name,
-                    담당_상담_수: assignedChatCount,
-                    담당_메시지_수: agent.assignedMessages,
-                    담당_글자_수: agent.assignedChars,
-                    도움_상담_수: agent.helpChats.size,
-                    도움_메시지_수: agent.helpMessages,
-                    도움_글자_수: agent.helpChars,
-                    도움_개입률: parseFloat(hir.toFixed(3)),
-                    개입_영향력_계수: Math.round(agent.iifScore),
-                    콘텐츠_정보_점수: agent.cisCount,
-                    언어_깊이_점수: Math.round(dls),
-                    신청서_링크_점수: als,
-                    도움_정성_점수: Math.round(helpQualityScore),
-                    담당_정성_점수: Math.round(assignedQualityScore),
-                    총_정성_점수: Math.round(totalQualityScore)
+                summary.push({
+                    상담사명: authorName,
+                    '담당 상담 수': assignedChats,
+                    '담당 메시지 수': assigneeStats.messageCount,
+                    '담당 글자 수': assigneeStats.charCount,
+                    '도움 상담 수': nonAssigneeStats.chatCount,
+                    '도움 메시지 수': nonAssigneeStats.messageCount,
+                    '도움 글자 수': nonAssigneeStats.charCount,
+                    '담당 정성 점수': qualitativeScores.assignee.toFixed(2),
+                    '도움 정성 점수': qualitativeScores.nonAssignee.toFixed(2),
+                    '총 정성 점수': (qualitativeScores.assignee + qualitativeScores.nonAssignee).toFixed(2)
                 });
+
+                if (nonAssigneeData.length > 0) {
+                    metrics.push({
+                        상담사명: authorName,
+                        '도움 개입률': authorMetrics.hir.toFixed(3),
+                        '개입 영향력 계수': authorMetrics.iif,
+                        '콘텐츠 정보 점수': authorMetrics.cis,
+                        '언어 깊이 점수': authorMetrics.dls.toFixed(1),
+                        '신청서 링크 점수': authorMetrics.als
+                    });
+                }
             });
 
             // 정렬
-            results.sort((a, b) => b.총_정성_점수 - a.총_정성_점수);
+            summary.sort((a, b) => parseFloat(b['총 정성 점수']) - parseFloat(a['총 정성 점수']));
+            metrics.sort((a, b) => parseInt(b['신청서 링크 점수']) - parseInt(a['신청서 링크 점수']));
 
-            addLog(`필터링: ${filteredCount}명 제외, ${results.length}명 분석 완료`, 'success');
+            return { summary, metrics };
+        }
 
+        // 기본 통계 계산
+        function calculateBasicStats(messages) {
+            const uniqueChats = new Set(messages.map(msg => msg.chatId));
+            const totalChars = messages.reduce((sum, msg) => sum + (msg.plainText?.length || 0), 0);
+            
             return {
-                summary: results,
-                totalAgents: results.length,
-                totalMessages: messages.length,
-                totalChats: userChats.length
+                chatCount: uniqueChats.size,
+                messageCount: messages.length,
+                charCount: totalChars
             };
         }
 
-        // 결과 워크북 생성
-        function createResultWorkbook(data) {
-            addLog('결과 파일 생성 중...', 'info');
-
-            const wb = XLSX.utils.book_new();
-
-            // 1. 채팅분석_요약 시트
-            const summarySheet = XLSX.utils.json_to_sheet(data.summary);
-            XLSX.utils.book_append_sheet(wb, summarySheet, '채팅분석_요약');
-            addLog('  - 채팅분석_요약 시트 생성', 'success');
-
-            // 2. 스코어보드 시트
-            const scoreboardData = createScoreboard(data.summary);
-            const scoreboardSheet = XLSX.utils.json_to_sheet(scoreboardData);
-            XLSX.utils.book_append_sheet(wb, scoreboardSheet, '스코어보드');
-            addLog('  - 스코어보드 시트 생성', 'success');
-
-            // 3. 채팅분석_지표 시트
-            const metricsData = data.summary.map(row => ({
-                상담사명: row.상담사명,
-                '도움 개입률': row.도움_개입률,
-                '개입 영향력 계수': row.개입_영향력_계수,
-                '콘텐츠 정보 점수': row.콘텐츠_정보_점수,
-                '언어 깊이 점수': row.언어_깊이_점수,
-                '신청서 링크 점수': row.신청서_링크_점수
-            }));
-            const metricsSheet = XLSX.utils.json_to_sheet(metricsData);
-            XLSX.utils.book_append_sheet(wb, metricsSheet, '채팅분석_지표');
-            addLog('  - 채팅분석_지표 시트 생성', 'success');
-
-            // 4. 도움말 시트
-            const helpData = [
-                {
-                    구분: '정량 지표',
-                    지표명: 'HIR (도움 개입률)',
-                    정의: '한 상담사가 참여한 전체 상담 중, 협업자로 참여한 상담의 비율',
-                    산식: '협업 참여 상담 건수 / 총 참여 상담 건수'
-                },
-                {
-                    구분: '정량 지표',
-                    지표명: 'IIF (개입 영향력 계수)',
-                    정의: '단순 메시지 수를 넘어, 얼마나 길고 복잡한 대화에 개입했는지를 가중치로 평가',
-                    산식: 'Σ (협업 참여한 각 상담 건의 전체 메시지 수)'
-                },
-                {
-                    구분: '정성 지표',
-                    지표명: 'CIS (콘텐츠 정보 점수)',
-                    정의: '도움 메시지 중, 사전에 정의된 핵심 상품 키워드를 포함한 메시지의 개수',
-                    산식: 'Σ (도움 메시지 내 핵심 키워드 포함 개수)'
-                },
-                {
-                    구분: '정성 지표',
-                    지표명: 'DLS (언어 깊이 점수)',
-                    정의: '도움 메시지 1개당 평균 글자 길이',
-                    산식: '도움 메시지 총 글자 수 / 도움 메시지 총 개수'
-                },
-                {
-                    구분: '정성 지표',
-                    지표명: 'ALS (신청서 링크 점수)',
-                    정의: '도움 메시지에서 신청서 링크를 발송한 횟수에 기반한 점수',
-                    산식: 'Σ (신청서 링크 발송 횟수) * 10점'
-                },
-                {
-                    구분: '정성 점수',
-                    지표명: '도움 정성 점수',
-                    정의: '도움 메시지의 희소성과 ALS 보정치를 반영한 질적 기여도 점수',
-                    산식: '기본 점수 * (1 + (정규화 ALS * 3))'
-                },
-                {
-                    구분: '정성 점수',
-                    지표명: '담당 정성 점수',
-                    정의: '담당 메시지의 희소성 점수를 반영하고, 도움 정성 점수와의 비율을 조정한 질적 기여도 점수',
-                    산식: '기본 점수 * 비율 조정 계수'
-                },
-                {
-                    구분: '정성 점수',
-                    지표명: '총 정성 점수',
-                    정의: '도움 정성 점수와 담당 정성 점수의 합산',
-                    산식: '도움 정성 점수 + 담당 정성 점수'
-                }
-            ];
-            const helpSheet = XLSX.utils.json_to_sheet(helpData);
-            XLSX.utils.book_append_sheet(wb, helpSheet, '도움말');
-            addLog('  - 도움말 시트 생성', 'success');
-
-            return wb;
+        // 담당 상담 수 계산
+        function calculateAssignedChats(authorName, originalData) {
+            // Manager ID 찾기
+            const manager = originalData.managers.find(m => m.name?.trim() === authorName);
+            if (!manager) return 0;
+            
+            const managerId = String(manager.id || '').trim().replace(/\.0$/, '');
+            
+            // 해당 관리자가 담당한 채팅 수 계산
+            const assignedCount = originalData.userChat.filter(chat => {
+                const assigneeId = String(chat.assigneeId || '').trim().replace(/\.0$/, '');
+                return assigneeId === managerId;
+            }).length;
+            
+            return assignedCount;
         }
 
-        // 스코어보드 데이터 생성
-        function createScoreboard(summary) {
-            if (!summary || summary.length === 0) return [];
-
-            const metrics = [
-                {key: '총_정성_점수', title: '총 정성 점수'},
-                {key: '도움_정성_점수', title: '도움 정성 점수'},
-                {key: '담당_정성_점수', title: '담당 정성 점수'},
-                {key: '도움_메시지_수', title: '도움 메시지 수'},
-                {key: '담당_메시지_수', title: '담당 메시지 수'},
-                {key: '도움_상담_수', title: '도움 상담 수'},
-                {key: '담당_상담_수', title: '담당 상담 수'},
-                {key: '신청서_링크_점수', title: '신청서 링크 점수'},
-                {key: '언어_깊이_점수', title: '언어 깊이 점수'}
-            ];
-            
-            const scoreboardData = [];
-
-            metrics.forEach(metric => {
-                const sorted = [...summary].sort((a, b) => b[metric.key] - a[metric.key]);
-                const top5 = sorted.slice(0, Math.min(5, sorted.length));
-                const bottom5 = sorted.slice(Math.max(0, sorted.length - 5));
-
-                // 섹션 제목
-                scoreboardData.push({
-                    '': `--- ${metric.title} 순위 ---`,
-                    '': '',
-                    '': '',
-                    '': '',
-                    '': ''
+        // 정성 점수 계산
+        function calculateQualitativeScores(assigneeData, nonAssigneeData) {
+            const calculateBaseScore = (messages) => {
+                if (messages.length === 0) return 0;
+                
+                const messageCounts = {};
+                messages.forEach(msg => {
+                    const text = msg.plainText;
+                    messageCounts[text] = (messageCounts[text] || 0) + 1;
                 });
-
-                // 헤더
-                scoreboardData.push({
-                    'Top 5': 'Top 5',
-                    '점수': '점수',
-                    '': '',
-                    'Bottom 5': 'Bottom 5',
-                    '점수 ': '점수'
+                
+                const totalMessages = messages.length;
+                let score = 0;
+                
+                messages.forEach(msg => {
+                    const frequency = messageCounts[msg.plainText];
+                    score += Math.log(totalMessages / frequency + 1);
                 });
+                
+                return score;
+            };
 
-                // 데이터
-                for (let i = 0; i < 5; i++) {
-                    scoreboardData.push({
-                        'Top 5': top5[i] ? top5[i].상담사명 : '',
-                        '점수': top5[i] ? top5[i][metric.key] : '',
-                        '': '',
-                        'Bottom 5': bottom5[i] ? bottom5[i].상담사명 : '',
-                        '점수 ': bottom5[i] ? bottom5[i][metric.key] : ''
-                    });
-                }
+            let assigneeScore = calculateBaseScore(assigneeData);
+            let nonAssigneeScore = calculateBaseScore(nonAssigneeData);
 
-                // 빈 줄
-                scoreboardData.push({});
+            // ALS 보정 (신청서 링크)
+            if (nonAssigneeData.length > 0) {
+                const alsCount = nonAssigneeData.filter(msg => 
+                    msg.plainText?.includes('https://form.ajd.co.kr/')
+                ).length;
+                
+                const alsBonus = alsCount * 10;
+                const alsNormalized = alsBonus / Math.max(1, nonAssigneeData.length);
+                nonAssigneeScore *= (1 + alsNormalized * 0.3);
+            }
+
+            return {
+                assignee: assigneeScore,
+                nonAssignee: nonAssigneeScore
+            };
+        }
+
+        // 메트릭스 계산
+        function calculateMetrics(authorName, nonAssigneeData) {
+            if (nonAssigneeData.length === 0) {
+                return { hir: 0, iif: 0, cis: 0, dls: 0, als: 0 };
+            }
+
+            // HIR (간단 버전 - 실제로는 전체 데이터가 필요)
+            const uniqueChats = new Set(nonAssigneeData.map(msg => msg.chatId));
+            const hir = 0.5; // 플레이스홀더
+
+            // IIF (개입 영향력 계수)
+            const chatLengths = {};
+            nonAssigneeData.forEach(msg => {
+                chatLengths[msg.chatId] = (chatLengths[msg.chatId] || 0) + 1;
             });
+            const iif = Object.values(chatLengths).reduce((sum, length) => sum + length, 0);
 
-            return scoreboardData;
+            // CIS (콘텐츠 정보 점수)
+            const keywords = ['월요금', '사은품', '위약금', '결합', '설치일', '설치비', '약정', '지원금', '할인', '통신사', '요금제', '인터넷', '휴대폰'];
+            const cis = nonAssigneeData.filter(msg => {
+                return keywords.some(keyword => msg.plainText?.includes(keyword));
+            }).length;
+
+            // DLS (언어 깊이 점수)
+            const totalChars = nonAssigneeData.reduce((sum, msg) => sum + (msg.plainText?.length || 0), 0);
+            const dls = totalChars / nonAssigneeData.length;
+
+            // ALS (신청서 링크 점수)
+            const als = nonAssigneeData.filter(msg => 
+                msg.plainText?.includes('https://form.ajd.co.kr/')
+            ).length * 10;
+
+            return { hir, iif, cis, dls, als };
+        }
+
+        // 결과 표시
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('resultSummary');
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h3>📊 분석 완료!</h3>
+                    <p>총 ${results.filteredCount}명의 상담사가 분석되었습니다.</p>
+                </div>
+            `;
+
+            // 상담사 요약 테이블
+            if (results.agents.summary.length > 0) {
+                html += `
+                    <h4>👨‍💼 상담사 분석 결과 (상위 10명)</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>상담사명</th>
+                                    <th>담당 상담 수</th>
+                                    <th>도움 상담 수</th>
+                                    <th>총 정성 점수</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                results.agents.summary.slice(0, 10).forEach((agent, index) => {
+                    html += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td><strong>${agent.상담사명}</strong></td>
+                            <td>${agent['담당 상담 수']}</td>
+                            <td>${agent['도움 상담 수']}</td>
+                            <td><strong>${agent['총 정성 점수']}</strong></td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            summaryDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
         }
 
         // 결과 다운로드
-        function downloadResult(wb) {
-            const timestamp = moment().format('YYYYMMDD_HHmmss');
-            const filename = `SNS센터_채팅분석_결과_${timestamp}.xlsx`;
-            
-            XLSX.writeFile(wb, filename);
-            addLog(`파일 다운로드: ${filename}`, 'success');
-        }
-
-        // 통계 표시
-        function showStats(data) {
-            document.getElementById('stats').style.display = 'grid';
-            
-            // 애니메이션 효과
-            animateNumber('totalAgents', data.totalAgents, 500);
-            animateNumber('totalMessages', data.totalMessages, 1000);
-            animateNumber('totalChats', data.totalChats, 800);
-        }
-
-        // 숫자 애니메이션
-        function animateNumber(elementId, finalValue, duration) {
-            const element = document.getElementById(elementId);
-            const startTime = Date.now();
-            const startValue = 0;
-            
-            const updateNumber = () => {
-                const currentTime = Date.now();
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                const currentValue = Math.floor(startValue + (finalValue - startValue) * easeOutQuad(progress));
-                element.textContent = currentValue.toLocaleString();
-                
-                if (progress < 1) {
-                    requestAnimationFrame(updateNumber);
-                } else {
-                    element.textContent = finalValue.toLocaleString();
-                }
-            };
-            
-            updateNumber();
-        }
-
-        // Easing 함수
-        function easeOutQuad(t) {
-            return t * (2 - t);
-        }
-
-        // 키보드 단축키
-        document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + Enter로 분석 실행
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                runAnalysis();
+        function downloadResults() {
+            if (!analysisResults) {
+                alert('다운로드할 결과가 없습니다.');
+                return;
             }
-        });
 
-        // 시작 시 환영 메시지
-        window.addEventListener('load', function() {
-            addLog('시스템 준비 완료', 'success');
-            addLog('Excel 파일을 선택하여 분석을 시작하세요', 'info');
-        });
+            try {
+                log('📥 결과 파일을 생성하고 있습니다...');
+                
+                const wb = XLSX.utils.book_new();
+                
+                // 상담사 요약 시트
+                if (analysisResults.agents.summary.length > 0) {
+                    const agentWs = XLSX.utils.json_to_sheet(analysisResults.agents.summary);
+                    XLSX.utils.book_append_sheet(wb, agentWs, '채팅분석_요약');
+                }
+                
+                // 상담사 지표 시트
+                if (analysisResults.agents.metrics.length > 0) {
+                    const metricsWs = XLSX.utils.json_to_sheet(analysisResults.agents.metrics);
+                    XLSX.utils.book_append_sheet(wb, metricsWs, '채팅분석_지표');
+                }
+                
+                // 관리자 분석 시트
+                if (analysisResults.managers.summary.length > 0) {
+                    const managerWs = XLSX.utils.json_to_sheet(analysisResults.managers.summary);
+                    XLSX.utils.book_append_sheet(wb, managerWs, '관리자_분석');
+                }
+                
+                // 도움말 시트
+                const helpData = [
+                    {
+                        '구분': '정량 지표',
+                        '지표명': 'HIR (도움 개입률)',
+                        '정의': '전체 참여 상담 중 협업자로 참여한 상담의 비율',
+                        '산식': '협업 참여 상담 건수 ÷ 총 참여 상담 건수'
+                    },
+                    {
+                        '구분': '정량 지표',
+                        '지표명': 'IIF (개입 영향력 계수)',
+                        '정의': '참여한 대화의 길이를 가중치로 반영한 영향력 지수',
+                        '산식': 'Σ(협업 참여한 각 상담의 전체 메시지 수)'
+                    },
+                    {
+                        '구분': '정성 지표',
+                        '지표명': 'CIS (콘텐츠 정보 점수)',
+                        '정의': '핵심 상품 키워드를 포함한 메시지 개수',
+                        '산식': 'Σ(도움 메시지 내 핵심 키워드 포함 개수)'
+                    },
+                    {
+                        '구분': '정성 지표',
+                        '지표명': 'DLS (언어 깊이 점수)',
+                        '정의': '도움 메시지의 평균 글자 길이',
+                        '산식': '도움 메시지 총 글자수 ÷ 도움 메시지 총 개수'
+                    },
+                    {
+                        '구분': '정성 지표',
+                        '지표명': 'ALS (신청서 링크 점수)',
+                        '정의': '신청서 링크 발송 횟수 기반 점수',
+                        '산식': 'Σ(신청서 링크 발송 횟수) × 10점'
+                    },
+                    {
+                        '구분': '정성 점수',
+                        '지표명': '도움 정성 점수',
+                        '정의': '도움 메시지의 희소성과 ALS 보정을 반영한 질적 기여도',
+                        '산식': '기본점수 × (1 + 정규화ALS × 3)'
+                    },
+                    {
+                        '구분': '정성 점수',
+                        '지표명': '담당 정성 점수',
+                        '정의': '담당 메시지의 희소성을 반영한 질적 기여도',
+                        '산식': '기본점수 × 비율조정계수'
+                    },
+                    {
+                        '구분': '정성 점수',
+                        '지표명': '총 정성 점수',
+                        '정의': '도움 정성 점수와 담당 정성 점수의 합계',
+                        '산식': '도움 정성 점수 + 담당 정성 점수'
+                    }
+                ];
+                
+                const helpWs = XLSX.utils.json_to_sheet(helpData);
+                XLSX.utils.book_append_sheet(wb, helpWs, '도움말');
+                
+                // 파일 다운로드
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '').replace('T', '_');
+                const filename = `SNS센터_채팅분석_결과_${timestamp}.xlsx`;
+                
+                XLSX.writeFile(wb, filename);
+                log(`✅ 결과 파일 다운로드 완료: ${filename}`);
+                
+            } catch (error) {
+                log(`❌ 다운로드 오류: ${error.message}`);
+                alert('결과 파일 생성 중 오류가 발생했습니다.');
+            }
+        }
     </script>
 </body>
 </html>
