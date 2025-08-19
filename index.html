@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNS센터 채팅분석 프로그램 v1.9</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #00A9FF;
+            --primary-blue-dark: #0084CC;
+            --primary-blue-light: #33BBFF;
+            --bg-black: #000000;
+            --bg-dark: #0A0A0A;
+            --bg-card: #141414;
+            --bg-input: #1A1A1A;
+            --border-color: #2A2A2A;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --text-muted: #808080;
+            --success: #00FF88;
+            --error: #FF4444;
+            --warning: #FFB800;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+            background: var(--bg-black);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50vh;
+            background: radial-gradient(ellipse at top, var(--primary-blue) 0%, transparent 50%);
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-dark);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 0 100px rgba(0, 169, 255, 0.1),
+                        0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 14px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 30px rgba(0, 169, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary-blue-light);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--primary-blue);
+            margin-right: 12px;
+            border-radius: 2px;
+            box-shadow: 0 0 10px var(--primary-blue);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: block;
+            padding: 16px;
+            background: var(--bg-input);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            color: var(--text-secondary);
+        }
+
+        .file-label:hover {
+            border-color: var(--primary-blue);
+            background: rgba(0, 169, 255, 0.05);
+            color: var(--primary-blue-light);
+        }
+
+        .file-label.has-file {
+            border-style: solid;
+            border-color: var(--success);
+            color: var(--success);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .date-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .date-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="date"], input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input[type="date"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(0, 169, 255, 0.1),
+                        0 0 20px rgba(0, 169, 255, 0.2);
+            background: var(--bg-black);
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group small {
+            display: block;
+            margin-top: 6px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .btn-analyze {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 24px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-analyze::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-analyze:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-analyze:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 169, 255, 0.4);
+        }
+
+        .btn-analyze:active {
+            transform: translateY(0);
+        }
+
+        .btn-analyze:disabled {
+            background: var(--bg-input);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-input);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 24px 0;
+            display: none;
+        }
+
+        .progress-bar.active {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-blue), var(--success));
+            border-radius: 3px;
+            transition: width 0.3s;
+            width: 0%;
+            box-shadow: 0 0 10px var(--primary-blue);
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-blue);
+            box-shadow: 0 10px 30px rgba(0, 169, 255, 0.2);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .log-section {
+            background: var(--bg-black);
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        }
+
+        .log-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-section::-webkit-scrollbar-track {
+            background: var(--bg-input);
+            border-radius: 4px;
+        }
+
+        .log-section::-webkit-scrollbar-thumb {
+            background: var(--primary-blue);
+            border-radius: 4px;
+        }
+
+        .log-title {
+            color: var(--primary-blue);
+            font-size: 13px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .log-content {
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .log-entry:hover {
+            background: var(--bg-input);
+        }
+
+        .log-entry.error {
+            color: var(--error);
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        .log-entry.success {
+            color: var(--success);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .log-entry.info {
+            color: var(--primary-blue-light);
+        }
+
+        .log-entry.warning {
+            color: var(--warning);
+        }
+
+        /* Loading animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--bg-input);
+            border-top: 3px solid var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SNS센터 채팅분석 프로그램 v1.9</h1>
+            <p>상담사 성과 분석 및 평가 시스템</p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <div class="section-title">1. 분석 파일 선택</div>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+                    <label for="fileInput" class="file-label" id="fileLabel">
+                        📁 클릭하여 Excel 파일 선택 (.xlsx)
+                    </label>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">2. 분석 기간 설정</div>
+                <div class="date-inputs">
+                    <div class="date-group">
+                        <label>시작일</label>
+                        <input type="date" id="startDate" value="2025-07-01">
+                    </div>
+                    <div class="date-group">
+                        <label>종료일</label>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">3. 분석 설정</div>
+                <div class="input-group">
+                    <label>관리자 목록</label>
+                    <input type="text" id="managers" value="이민주, 이종민, 윤도우리, 김시진, 손진우">
+                    <small>쉼표(,)로 구분하여 입력하세요</small>
+                </div>
+                <div class="input-group">
+                    <label>분석 제외 명단</label>
+                    <input type="text" id="exclusions" value="채주은, 정용욱, 한승윤, 김종현">
+                    <small>쉼표(,)로 구분하여 입력하세요 (공란 가능)</small>
+                </div>
+            </div>
+
+            <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
+                <span id="btnText">📊 분석 실행</span>
+                <span id="btnSpinner" style="display:none;" class="loading-spinner"></span>
+            </button>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalAgents">0</div>
+                    <div class="stat-label">분석 상담사</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalMessages">0</div>
+                    <div class="stat-label">총 메시지</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalChats">0</div>
+                    <div class="stat-label">총 상담</div>
+                </div>
+            </div>
+
+            <div class="log-section">
+                <div class="log-title">▶ CONSOLE OUTPUT</div>
+                <div class="log-content" id="logContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let uploadedFile = null;
+        let workbook = null;
+        let isProcessing = false;
+
+        // 오늘 날짜에서 하루 전 설정
+        document.getElementById('endDate').value = moment().subtract(1, 'days').format('YYYY-MM-DD');
+
+        // 파일 선택 이벤트
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadedFile = file;
+                const fileName = file.name;
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                document.getElementById('fileLabel').innerHTML = `✅ ${fileName} <span style="opacity:0.6">(${fileSize} MB)</span>`;
+                document.getElementById('fileLabel').classList.add('has-file');
+                addLog(`파일 선택: ${fileName} (${fileSize} MB)`, 'success');
+            }
+        });
+
+        // 로그 추가 함수
+        function addLog(message, type = 'info') {
+            const logContent = document.getElementById('logContent');
+            const timestamp = moment().format('HH:mm:ss');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            
+            let icon = '●';
+            switch(type) {
+                case 'success': icon = '✓'; break;
+                case 'error': icon = '✗'; break;
+                case 'warning': icon = '⚠'; break;
+                case 'info': icon = '►'; break;
+            }
+            
+            logEntry.textContent = `[${timestamp}] ${icon} ${message}`;
+            logContent.appendChild(logEntry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // 진행률 업데이트
+        function updateProgress(percent) {
+            document.getElementById('progressBar').classList.add('active');
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        // 분석 실행
+        async function runAnalysis() {
+            if (isProcessing) return;
+            
+            if (!uploadedFile) {
+                alert('⚠️ Excel 파일을 먼저 선택해주세요.');
+                return;
+            }
+
+            isProcessing = true;
+            const btn = document.getElementById('analyzeBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            
+            btn.disabled = true;
+            btnText.textContent = '분석 중';
+            btnSpinner.style.display = 'inline-block';
+
+            // 이전 통계 숨기기
+            document.getElementById('stats').style.display = 'none';
+
+            try {
+                addLog('=== 분석 시작 ===', 'info');
+                updateProgress(5);
+
+                // Excel 파일 읽기
+                addLog('Excel 파일 읽는 중...', 'info');
+                const data = await readExcelFile(uploadedFile);
+                workbook = XLSX.read(data, {type: 'array', cellDates: true});
+                updateProgress(25);
+
+                // 시트 정보 로깅
+                const sheetNames = workbook.SheetNames;
+                addLog(`총 ${sheetNames.length}개 시트 발견`, 'info');
+                sheetNames.forEach(name => {
+                    addLog(`  - ${name}`, 'info');
+                });
+
+                // 데이터 처리
+                addLog('데이터 처리 중...', 'info');
+                const processedData = await processData(workbook);
+                updateProgress(60);
+
+                // 결과 생성
+                addLog('결과 Excel 생성 중...', 'info');
+                const resultWorkbook = createResultWorkbook(processedData);
+                updateProgress(85);
+
+                // 파일 다운로드
+                downloadResult(resultWorkbook);
+                updateProgress(100);
+
+                addLog('=== 분석 완료 ===', 'success');
+                
+                // 통계 표시
+                showStats(processedData);
+
+                // 성공 알림
+                setTimeout(() => {
+                    alert('✅ 분석이 완료되었습니다!\n결과 파일이 다운로드되었습니다.');
+                }, 500);
+
+            } catch (error) {
+                console.error(error);
+                addLog(`오류: ${error.message}`, 'error');
+                alert(`❌ 분석 중 오류가 발생했습니다:\n${error.message}`);
+            } finally {
+                isProcessing = false;
+                btn.disabled = false;
+                btnText.textContent = '📊 분석 실행';
+                btnSpinner.style.display = 'none';
+                
+                setTimeout(() => {
+                    document.getElementById('progressBar').classList.remove('active');
+                    document.getElementById('progressFill').style.width = '0%';
+                }, 2000);
+            }
+        }
+
+        // Excel 파일 읽기
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(new Uint8Array(e.target.result));
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // 데이터 처리
+        async function processData(wb) {
+            const startDate = moment(document.getElementById('startDate').value);
+            const endDate = moment(document.getElementById('endDate').value).endOf('day');
+            const managers = document.getElementById('managers').value.split(',').map(m => m.trim()).filter(m => m);
+            const exclusions = document.getElementById('exclusions').value.split(',').map(e => e.trim()).filter(e => e);
+
+            addLog(`분석 기간: ${startDate.format('YYYY-MM-DD')} ~ ${endDate.format('YYYY-MM-DD')}`, 'info');
+            addLog(`관리자: ${managers.length}명`, 'info');
+            addLog(`제외: ${exclusions.length}명`, 'info');
+
+            // 시트 찾기 및 데이터 추출
+            const sheets = wb.SheetNames;
+            let userChatData = [];
+            let messageData = [];
+            let managerData = [];
+
+            sheets.forEach(sheetName => {
+                const sheet = wb.Sheets[sheetName];
+                const data = XLSX.utils.sheet_to_json(sheet, {raw: false, dateNF: 'yyyy-mm-dd'});
+                
+                if (sheetName.includes('UserChat data')) {
+                    userChatData = userChatData.concat(data);
+                } else if (sheetName.includes('Message data')) {
+                    messageData = messageData.concat(data);
+                } else if (sheetName.includes('Manager data')) {
+                    managerData = managerData.concat(data);
+                }
+            });
+
+            if (!userChatData.length || !messageData.length || !managerData.length) {
+                throw new Error('필수 시트를 찾을 수 없습니다. (UserChat data, Message data, Manager data)');
+            }
+
+            addLog(`데이터 로드: UserChat(${userChatData.length}), Message(${messageData.length}), Manager(${managerData.length})`, 'success');
+
+            // 중복 제거
+            const uniqueUserChat = removeDuplicates(userChatData, 'id');
+            const uniqueMessage = removeDuplicates(messageData, ['chatId', 'personId', 'createdAt', 'plainText']);
+            const uniqueManager = removeDuplicates(managerData, 'id');
+
+            addLog(`중복 제거 후: UserChat(${uniqueUserChat.length}), Message(${uniqueMessage.length})`, 'info');
+
+            // 날짜 필터링
+            const filteredUserChat = uniqueUserChat.filter(row => {
+                const date = moment(row.firstOpenedAt);
+                return date.isValid() && date.isBetween(startDate, endDate);
+            });
+
+            const filteredMessages = uniqueMessage.filter(row => {
+                const date = moment(row.createdAt);
+                return date.isValid() && date.isBetween(startDate, endDate);
+            });
+
+            addLog(`기간 필터링: 상담(${filteredUserChat.length}), 메시지(${filteredMessages.length})`, 'success');
+
+            if (filteredMessages.length === 0) {
+                throw new Error('선택된 기간에 해당하는 데이터가 없습니다.');
+            }
+
+            // 데이터 분석
+            const analysisResult = analyzeData(filteredMessages, filteredUserChat, uniqueManager, managers, exclusions);
+
+            return analysisResult;
+        }
+
+        // 중복 제거 함수
+        function removeDuplicates(data, keys) {
+            const keyArray = Array.isArray(keys) ? keys : [keys];
+            const seen = new Set();
+            return data.filter(item => {
+                const key = keyArray.map(k => item[k]).join('|');
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        // 데이터 분석
+        function analyzeData(messages, userChats, managers, managerList, exclusionList) {
+            addLog('데이터 분석 시작...', 'info');
+
+            // ID 정리 함수
+            const cleanId = (id) => String(id || '').trim().replace(/\.0$/, '');
+
+            // 관리자 이름-ID 매핑
+            const managerMap = {};
+            managers.forEach(m => {
+                managerMap[cleanId(m.id)] = m.name;
+            });
+
+            // 상담사별 통계 초기화
+            const agentStats = {};
+            
+            // 분석 기간 계산
+            const startDate = moment(document.getElementById('startDate').value);
+            const endDate = moment(document.getElementById('endDate').value);
+            const analysisDays = endDate.diff(startDate, 'days') + 1;
+            const minMessageThreshold = analysisDays * 10;
+
+            addLog(`분석 기간: ${analysisDays}일, 최소 메시지 기준: ${minMessageThreshold}개`, 'info');
+
+            // 메시지 처리
+            let processedCount = 0;
+            messages.forEach(msg => {
+                processedCount++;
+                if (processedCount % 1000 === 0) {
+                    addLog(`  ${processedCount}개 메시지 처리 완료...`, 'info');
+                }
+
+                const authorId = cleanId(msg.personId);
+                const authorName = managerMap[authorId] || authorId;
+                const chatId = cleanId(msg.chatId);
+
+                // 제외 목록 체크
+                if (exclusionList.includes(authorName)) return;
+
+                if (!agentStats[authorName]) {
+                    agentStats[authorName] = {
+                        name: authorName,
+                        assignedChats: new Set(),
+                        helpChats: new Set(),
+                        assignedMessages: 0,
+                        helpMessages: 0,
+                        assignedChars: 0,
+                        helpChars: 0,
+                        alsCount: 0,
+                        cisCount: 0,
+                        totalMessageLength: 0,
+                        iifScore: 0
+                    };
+                }
+
+                // 담당자 찾기
+                const chat = userChats.find(c => cleanId(c.id) === chatId);
+                const isAssignee = chat && cleanId(chat.assigneeId) === authorId;
+
+                const messageText = msg.plainText || '';
+                const messageLength = messageText.length;
+
+                if (isAssignee) {
+                    agentStats[authorName].assignedChats.add(chatId);
+                    agentStats[authorName].assignedMessages++;
+                    agentStats[authorName].assignedChars += messageLength;
+                } else {
+                    agentStats[authorName].helpChats.add(chatId);
+                    agentStats[authorName].helpMessages++;
+                    agentStats[authorName].helpChars += messageLength;
+                    agentStats[authorName].totalMessageLength += messageLength;
+
+                    // ALS (신청서 링크) 체크
+                    if (messageText.includes('https://form.ajd.co.kr/')) {
+                        agentStats[authorName].alsCount++;
+                    }
+
+                    // CIS (핵심 키워드) 체크
+                    const coreKeywords = ['월요금', '사은품', '위약금', '결합', '설치일', '설치비', '약정', '지원금', '할인', '통신사', '요금제', '인터넷', '휴대폰'];
+                    const keywordCount = coreKeywords.filter(keyword => messageText.includes(keyword)).length;
+                    if (keywordCount > 0) {
+                        agentStats[authorName].cisCount += keywordCount;
+                    }
+                }
+            });
+
+            // IIF (개입 영향력 계수) 계산
+            const chatMessageCounts = {};
+            messages.forEach(msg => {
+                const chatId = cleanId(msg.chatId);
+                chatMessageCounts[chatId] = (chatMessageCounts[chatId] || 0) + 1;
+            });
+
+            messages.forEach(msg => {
+                const authorId = cleanId(msg.personId);
+                const authorName = managerMap[authorId] || authorId;
+                const chatId = cleanId(msg.chatId);
+                
+                if (agentStats[authorName]) {
+                    const chat = userChats.find(c => cleanId(c.id) === chatId);
+                    const isAssignee = chat && cleanId(chat.assigneeId) === authorId;
+                    
+                    if (!isAssignee) {
+                        agentStats[authorName].iifScore += chatMessageCounts[chatId] || 0;
+                    }
+                }
+            });
+
+            addLog(`${processedCount}개 메시지 처리 완료`, 'success');
+
+            // 최종 지표 계산 및 필터링
+            const results = [];
+            let filteredCount = 0;
+            
+            Object.values(agentStats).forEach(agent => {
+                // 관리자 제외
+                if (managerList.includes(agent.name)) return;
+                
+                const totalChats = agent.assignedChats.size + agent.helpChats.size;
+                const totalMessages = agent.assignedMessages + agent.helpMessages;
+                
+                // 필터링 조건
+                if (totalChats === 0) return;
+                
+                const hir = agent.helpChats.size / totalChats;
+                
+                // HIR이 0 또는 1인 경우 제외
+                if (hir === 0 || hir === 1) {
+                    filteredCount++;
+                    return;
+                }
+                
+                // 총 메시지 수가 10개 이하인 경우 제외
+                if (totalMessages <= 10) {
+                    filteredCount++;
+                    return;
+                }
+                
+                // 기간별 최소 메시지 수 미달 제외
+                if (totalMessages < minMessageThreshold) {
+                    filteredCount++;
+                    return;
+                }
+
+                const dls = agent.helpMessages > 0 ? agent.totalMessageLength / agent.helpMessages : 0;
+                const als = agent.alsCount * 10;
+
+                // 정성 점수 계산
+                const helpQualityBase = agent.helpMessages * Math.log1p(agent.helpMessages);
+                const alsBonus = 1 + (als / 100) * 3; // ALS 가중치 3
+                const helpQualityScore = helpQualityBase * alsBonus;
+                
+                const assignedQualityBase = agent.assignedMessages * Math.log1p(agent.assignedMessages);
+                const assignedQualityScore = assignedQualityBase * 0.333; // 담당 점수 비율 조정
+                
+                const totalQualityScore = helpQualityScore + assignedQualityScore;
+
+                // 담당 상담 수 계산 (firstOpenedAt 기준)
+                const assignedChatCount = userChats.filter(chat => {
+                    const assigneeId = cleanId(chat.assigneeId);
+                    const assigneeName = managerMap[assigneeId] || assigneeId;
+                    return assigneeName === agent.name;
+                }).length;
+
+                results.push({
+                    상담사명: agent.name,
+                    담당_상담_수: assignedChatCount,
+                    담당_메시지_수: agent.assignedMessages,
+                    담당_글자_수: agent.assignedChars,
+                    도움_상담_수: agent.helpChats.size,
+                    도움_메시지_수: agent.helpMessages,
+                    도움_글자_수: agent.helpChars,
+                    도움_개입률: parseFloat(hir.toFixed(3)),
+                    개입_영향력_계수: Math.round(agent.iifScore),
+                    콘텐츠_정보_점수: agent.cisCount,
+                    언어_깊이_점수: Math.round(dls),
+                    신청서_링크_점수: als,
+                    도움_정성_점수: Math.round(helpQualityScore),
+                    담당_정성_점수: Math.round(assignedQualityScore),
+                    총_정성_점수: Math.round(totalQualityScore)
+                });
+            });
+
+            // 정렬
+            results.sort((a, b) => b.총_정성_점수 - a.총_정성_점수);
+
+            addLog(`필터링: ${filteredCount}명 제외, ${results.length}명 분석 완료`, 'success');
+
+            return {
+                summary: results,
+                totalAgents: results.length,
+                totalMessages: messages.length,
+                totalChats: userChats.length
+            };
+        }
+
+        // 결과 워크북 생성
+        function createResultWorkbook(data) {
+            addLog('결과 파일 생성 중...', 'info');
+
+            const wb = XLSX.utils.book_new();
+
+            // 1. 채팅분석_요약 시트
+            const summarySheet = XLSX.utils.json_to_sheet(data.summary);
+            XLSX.utils.book_append_sheet(wb, summarySheet, '채팅분석_요약');
+            addLog('  - 채팅분석_요약 시트 생성', 'success');
+
+            // 2. 스코어보드 시트
+            const scoreboardData = createScoreboard(data.summary);
+            const scoreboardSheet = XLSX.utils.json_to_sheet(scoreboardData);
+            XLSX.utils.book_append_sheet(wb, scoreboardSheet, '스코어보드');
+            addLog('  - 스코어보드 시트 생성', 'success');
+
+            // 3. 채팅분석_지표 시트
+            const metricsData = data.summary.map(row => ({
+                상담사명: row.상담사명,
+                '도움 개입률': row.도움_개입률,
+                '개입 영향력 계수': row.개입_영향력_계수,
+                '콘텐츠 정보 점수': row.콘텐츠_정보_점수,
+                '언어 깊이 점수': row.언어_깊이_점수,
+                '신청서 링크 점수': row.신청서_링크_점수
+            }));
+            const metricsSheet = XLSX.utils.json_to_sheet(metricsData);
+            XLSX.utils.book_append_sheet(wb, metricsSheet, '채팅분석_지표');
+            addLog('  - 채팅분석_지표 시트 생성', 'success');
+
+            // 4. 도움말 시트
+            const helpData = [
+                {
+                    구분: '정량 지표',
+                    지표명: 'HIR (도움 개입률)',
+                    정의: '한 상담사가 참여한 전체 상담 중, 협업자로 참여한 상담의 비율',
+                    산식: '협업 참여 상담 건수 / 총 참여 상담 건수'
+                },
+                {
+                    구분: '정량 지표',
+                    지표명: 'IIF (개입 영향력 계수)',
+                    정의: '단순 메시지 수를 넘어, 얼마나 길고 복잡한 대화에 개입했는지를 가중치로 평가',
+                    산식: 'Σ (협업 참여한 각 상담 건의 전체 메시지 수)'
+                },
+                {
+                    구분: '정성 지표',
+                    지표명: 'CIS (콘텐츠 정보 점수)',
+                    정의: '도움 메시지 중, 사전에 정의된 핵심 상품 키워드를 포함한 메시지의 개수',
+                    산식: 'Σ (도움 메시지 내 핵심 키워드 포함 개수)'
+                },
+                {
+                    구분: '정성 지표',
+                    지표명: 'DLS (언어 깊이 점수)',
+                    정의: '도움 메시지 1개당 평균 글자 길이',
+                    산식: '도움 메시지 총 글자 수 / 도움 메시지 총 개수'
+                },
+                {
+                    구분: '정성 지표',
+                    지표명: 'ALS (신청서 링크 점수)',
+                    정의: '도움 메시지에서 신청서 링크를 발송한 횟수에 기반한 점수',
+                    산식: 'Σ (신청서 링크 발송 횟수) * 10점'
+                },
+                {
+                    구분: '정성 점수',
+                    지표명: '도움 정성 점수',
+                    정의: '도움 메시지의 희소성과 ALS 보정치를 반영한 질적 기여도 점수',
+                    산식: '기본 점수 * (1 + (정규화 ALS * 3))'
+                },
+                {
+                    구분: '정성 점수',
+                    지표명: '담당 정성 점수',
+                    정의: '담당 메시지의 희소성 점수를 반영하고, 도움 정성 점수와의 비율을 조정한 질적 기여도 점수',
+                    산식: '기본 점수 * 비율 조정 계수'
+                },
+                {
+                    구분: '정성 점수',
+                    지표명: '총 정성 점수',
+                    정의: '도움 정성 점수와 담당 정성 점수의 합산',
+                    산식: '도움 정성 점수 + 담당 정성 점수'
+                }
+            ];
+            const helpSheet = XLSX.utils.json_to_sheet(helpData);
+            XLSX.utils.book_append_sheet(wb, helpSheet, '도움말');
+            addLog('  - 도움말 시트 생성', 'success');
+
+            return wb;
+        }
+
+        // 스코어보드 데이터 생성
+        function createScoreboard(summary) {
+            if (!summary || summary.length === 0) return [];
+
+            const metrics = [
+                {key: '총_정성_점수', title: '총 정성 점수'},
+                {key: '도움_정성_점수', title: '도움 정성 점수'},
+                {key: '담당_정성_점수', title: '담당 정성 점수'},
+                {key: '도움_메시지_수', title: '도움 메시지 수'},
+                {key: '담당_메시지_수', title: '담당 메시지 수'},
+                {key: '도움_상담_수', title: '도움 상담 수'},
+                {key: '담당_상담_수', title: '담당 상담 수'},
+                {key: '신청서_링크_점수', title: '신청서 링크 점수'},
+                {key: '언어_깊이_점수', title: '언어 깊이 점수'}
+            ];
+            
+            const scoreboardData = [];
+
+            metrics.forEach(metric => {
+                const sorted = [...summary].sort((a, b) => b[metric.key] - a[metric.key]);
+                const top5 = sorted.slice(0, Math.min(5, sorted.length));
+                const bottom5 = sorted.slice(Math.max(0, sorted.length - 5));
+
+                // 섹션 제목
+                scoreboardData.push({
+                    '': `--- ${metric.title} 순위 ---`,
+                    '': '',
+                    '': '',
+                    '': '',
+                    '': ''
+                });
+
+                // 헤더
+                scoreboardData.push({
+                    'Top 5': 'Top 5',
+                    '점수': '점수',
+                    '': '',
+                    'Bottom 5': 'Bottom 5',
+                    '점수 ': '점수'
+                });
+
+                // 데이터
+                for (let i = 0; i < 5; i++) {
+                    scoreboardData.push({
+                        'Top 5': top5[i] ? top5[i].상담사명 : '',
+                        '점수': top5[i] ? top5[i][metric.key] : '',
+                        '': '',
+                        'Bottom 5': bottom5[i] ? bottom5[i].상담사명 : '',
+                        '점수 ': bottom5[i] ? bottom5[i][metric.key] : ''
+                    });
+                }
+
+                // 빈 줄
+                scoreboardData.push({});
+            });
+
+            return scoreboardData;
+        }
+
+        // 결과 다운로드
+        function downloadResult(wb) {
+            const timestamp = moment().format('YYYYMMDD_HHmmss');
+            const filename = `SNS센터_채팅분석_결과_${timestamp}.xlsx`;
+            
+            XLSX.writeFile(wb, filename);
+            addLog(`파일 다운로드: ${filename}`, 'success');
+        }
+
+        // 통계 표시
+        function showStats(data) {
+            document.getElementById('stats').style.display = 'grid';
+            
+            // 애니메이션 효과
+            animateNumber('totalAgents', data.totalAgents, 500);
+            animateNumber('totalMessages', data.totalMessages, 1000);
+            animateNumber('totalChats', data.totalChats, 800);
+        }
+
+        // 숫자 애니메이션
+        function animateNumber(elementId, finalValue, duration) {
+            const element = document.getElementById(elementId);
+            const startTime = Date.now();
+            const startValue = 0;
+            
+            const updateNumber = () => {
+                const currentTime = Date.now();
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const currentValue = Math.floor(startValue + (finalValue - startValue) * easeOutQuad(progress));
+                element.textContent = currentValue.toLocaleString();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateNumber);
+                } else {
+                    element.textContent = finalValue.toLocaleString();
+                }
+            };
+            
+            updateNumber();
+        }
+
+        // Easing 함수
+        function easeOutQuad(t) {
+            return t * (2 - t);
+        }
+
+        // 키보드 단축키
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + Enter로 분석 실행
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                runAnalysis();
+            }
+        });
+
+        // 시작 시 환영 메시지
+        window.addEventListener('load', function() {
+            addLog('시스템 준비 완료', 'success');
+            addLog('Excel 파일을 선택하여 분석을 시작하세요', 'info');
+        });
+    </script>
+</body>
+</html>
