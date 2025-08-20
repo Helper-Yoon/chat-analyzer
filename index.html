@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SNS센터 채팅분석 프로그램 v1.9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment/2.29.4/moment.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -225,14 +224,6 @@
             word-wrap: break-word;
         }
         
-        .log-content .log-time {
-            color: #666;
-        }
-        
-        .log-content .log-message {
-            color: #ccc;
-        }
-        
         .progress-bar {
             display: none;
             width: 100%;
@@ -255,7 +246,6 @@
             display: none;
         }
         
-        /* 스크롤바 스타일 */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -274,7 +264,6 @@
             background: #2a2a2a;
         }
         
-        /* 입력 필드 자동완성 배경색 */
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus {
@@ -361,9 +350,15 @@
                 
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    fileData = XLSX.read(data, {type: 'array', cellDates: true});
-                    log('파일 로드 완료');
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        fileData = XLSX.read(data, {type: 'array', cellDates: true});
+                        log('파일 로드 완료');
+                    } catch (error) {
+                        log(`파일 로드 실패: ${error.message}`);
+                        alert('파일을 읽는 중 오류가 발생했습니다.');
+                        fileData = null;
+                    }
                 };
                 reader.readAsArrayBuffer(file);
             }
@@ -374,25 +369,67 @@
             const now = new Date();
             const timeStr = now.toTimeString().split(' ')[0];
             const logContent = document.getElementById('logContent');
-            const logEntry = `<span class="log-time">[${timeStr}]</span> <span class="log-message">${message}</span>\n`;
-            logContent.innerHTML += logEntry;
+            logContent.textContent += `[${timeStr}] ${message}\n`;
             logContent.scrollTop = logContent.scrollHeight;
         }
         
         // ID 정제 함수
         function cleanId(value) {
-            if (value == null) return '';
+            if (value == null || value === undefined || value === '') return '';
             return String(value).trim().replace(/\.0$/, '');
         }
         
         // 날짜 파싱 함수
         function parseDate(value) {
             if (!value) return null;
-            if (value instanceof Date) return value;
-            if (typeof value === 'number') {
-                return new Date((value - 25569) * 86400 * 1000);
+            
+            try {
+                if (value instanceof Date) {
+                    return isNaN(value.getTime()) ? null : value;
+                }
+                
+                if (typeof value === 'number') {
+                    // Excel 날짜 숫자 처리
+                    const date = new Date((value - 25569) * 86400 * 1000);
+                    return isNaN(date.getTime()) ? null : date;
+                }
+                
+                const date = new Date(value);
+                return isNaN(date.getTime()) ? null : date;
+            } catch (e) {
+                return null;
             }
-            return new Date(value);
+        }
+        
+        // 날짜 포맷 함수
+        function formatDateTime(date) {
+            if (!date) return '';
+            
+            try {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        // 현재 시간 문자열 생성
+        function getCurrentTimeString() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            return `${year}${month}${day}_${hours}${minutes}${seconds}`;
         }
         
         // 분석 실행
@@ -425,6 +462,7 @@
                 if (!processedData) {
                     btn.disabled = false;
                     btn.textContent = '분석 실행';
+                    document.getElementById('progressBar').style.display = 'none';
                     return;
                 }
                 
@@ -435,8 +473,10 @@
                 
                 updateProgress(100);
                 log('분석 완료');
+                alert('분석이 완료되었습니다. 결과 파일이 다운로드됩니다.');
                 
             } catch (error) {
+                console.error(error);
                 log(`오류: ${error.message}`);
                 alert(`분석 중 오류가 발생했습니다:\n${error.message}`);
             } finally {
@@ -456,509 +496,535 @@
         
         // 데이터 로드 및 처리
         async function loadAndProcessData(startDateStr, endDateStr) {
-            log('엑셀 파일 로딩...');
-            
-            const sheets = fileData.SheetNames;
-            const userChatSheets = [];
-            const messageSheets = [];
-            const managerSheets = [];
-            
-            sheets.forEach(sheetName => {
-                const sheet = XLSX.utils.sheet_to_json(fileData.Sheets[sheetName], {raw: false, dateNF: 'yyyy-mm-dd hh:mm:ss'});
-                if (sheetName.includes('UserChat data')) {
-                    userChatSheets.push(sheet);
-                } else if (sheetName.includes('Message data')) {
-                    messageSheets.push(sheet);
-                } else if (sheetName.includes('Manager data')) {
-                    managerSheets.push(sheet);
-                }
-            });
-            
-            if (userChatSheets.length === 0 || messageSheets.length === 0 || managerSheets.length === 0) {
-                log("오류: 필수 시트를 찾을 수 없습니다");
-                alert('필수 시트를 찾을 수 없습니다.');
-                return null;
-            }
-            
-            log('시트 통합 및 중복 제거...');
-            
-            const userChatData = [];
-            const messageData = [];
-            const managerData = [];
-            
-            const userChatIds = new Set();
-            userChatSheets.forEach(sheet => {
-                sheet.forEach(row => {
-                    const id = cleanId(row.id);
-                    if (!userChatIds.has(id)) {
-                        userChatIds.add(id);
-                        userChatData.push({
-                            ...row,
-                            id: id,
-                            assigneeId: cleanId(row.assigneeId),
-                            firstOpenedAt: parseDate(row.firstOpenedAt)
-                        });
-                    }
-                });
-            });
-            
-            const messageKeys = new Set();
-            messageSheets.forEach(sheet => {
-                sheet.forEach(row => {
-                    const key = `${row.chatId}_${row.personId}_${row.createdAt}_${row.plainText}`;
-                    if (!messageKeys.has(key)) {
-                        messageKeys.add(key);
-                        messageData.push({
-                            ...row,
-                            chatId: cleanId(row.chatId),
-                            personId: cleanId(row.personId),
-                            createdAt: parseDate(row.createdAt)
-                        });
-                    }
-                });
-            });
-            
-            const managerIds = new Set();
-            managerSheets.forEach(sheet => {
-                sheet.forEach(row => {
-                    const id = cleanId(row.id);
-                    if (!managerIds.has(id)) {
-                        managerIds.add(id);
-                        managerData.push({
-                            ...row,
-                            id: id
-                        });
-                    }
-                });
-            });
-            
-            log('데이터 정제 및 병합...');
-            
-            const startTs = new Date(startDateStr);
-            const endTs = new Date(endDateStr);
-            endTs.setDate(endTs.getDate() + 1);
-            
-            const filteredUserChat = userChatData.filter(row => {
-                return row.firstOpenedAt && row.firstOpenedAt >= startTs && row.firstOpenedAt < endTs;
-            });
-            log(`담당 상담: ${filteredUserChat.length}개`);
-            
-            const filteredMessage = messageData.filter(row => {
-                return row.createdAt && row.createdAt >= startTs && row.createdAt < endTs;
-            });
-            log(`메시지: ${filteredMessage.length}개`);
-            
-            if (filteredMessage.length === 0) {
-                log('선택된 기간 내 메시지가 없습니다');
-                return null;
-            }
-            
-            const mergedData = [];
-            filteredMessage.forEach(msg => {
-                const userChat = userChatData.find(uc => uc.id === msg.chatId);
-                if (userChat && userChat.assigneeId) {
-                    const manager = managerData.find(m => m.id === msg.personId);
-                    if (manager) {
-                        mergedData.push({
-                            ...msg,
-                            assigneeId: userChat.assigneeId,
-                            authorName: manager.name
-                        });
-                    }
-                }
-            });
-            
-            log(`유효 레코드: ${mergedData.length}개`);
-            
-            return {
-                merged: mergedData,
-                userChat: filteredUserChat,
-                manager: managerData
-            };
-        }
-        
-        // 결과 엑셀 생성
-        async function createOutputExcel(processedData, startDateStr, endDateStr) {
-            const merged = processedData.merged;
-            const userChat = processedData.userChat;
-            const manager = processedData.manager;
-            
-            const managersList = document.getElementById('managers').value.split(',').map(n => n.trim()).filter(n => n);
-            const exclusionList = document.getElementById('exclusions').value.split(',').map(n => n.trim()).filter(n => n);
-            
-            if (exclusionList.length > 0) {
-                log(`제외: ${exclusionList.join(', ')}`);
-            }
-            
-            const managerData = merged.filter(row => managersList.includes(row.authorName));
-            const agentData = merged.filter(row => 
-                !managersList.includes(row.authorName) && !exclusionList.includes(row.authorName)
-            );
-            
-            const uniqueAgents = [...new Set(agentData.map(row => row.authorName))];
-            const agentNonAssignee = agentData.filter(row => row.personId !== row.assigneeId);
-            
-            const collaboratedChats = {};
-            const totalChats = {};
-            
-            agentNonAssignee.forEach(row => {
-                if (!collaboratedChats[row.authorName]) {
-                    collaboratedChats[row.authorName] = new Set();
-                }
-                collaboratedChats[row.authorName].add(row.chatId);
-            });
-            
-            agentData.forEach(row => {
-                if (!totalChats[row.authorName]) {
-                    totalChats[row.authorName] = new Set();
-                }
-                totalChats[row.authorName].add(row.chatId);
-            });
-            
-            const hirSummary = {};
-            uniqueAgents.forEach(agent => {
-                const collab = collaboratedChats[agent] ? collaboratedChats[agent].size : 0;
-                const total = totalChats[agent] ? totalChats[agent].size : 0;
-                hirSummary[agent] = total > 0 ? collab / total : 0;
-            });
-            
-            const totalMsgCounts = {};
-            agentData.forEach(row => {
-                totalMsgCounts[row.authorName] = (totalMsgCounts[row.authorName] || 0) + 1;
-            });
-            
-            const startDate = new Date(startDateStr);
-            const endDate = new Date(endDateStr);
-            const analysisDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-            const minMsgThreshold = analysisDays * 10;
-            log(`분석 기간: ${analysisDays}일, 최소 메시지: ${minMsgThreshold}개`);
-            
-            log(`필터링 전: ${uniqueAgents.length}명`);
-            const filteredAgents = uniqueAgents.filter(agent => {
-                const hir = hirSummary[agent] || 0;
-                const msgCount = totalMsgCounts[agent] || 0;
-                return hir > 0 && hir < 1 && msgCount > 10 && msgCount >= minMsgThreshold;
-            });
-            log(`필터링 후: ${filteredAgents.length}명`);
-            
-            if (filteredAgents.length === 0) {
-                log('필터링 후 분석 대상 없음');
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.json_to_sheet([{'알림': '필터 조건에 해당하는 상담사가 없어 데이터를 생성할 수 없습니다.'}]);
-                XLSX.utils.book_append_sheet(wb, ws, '결과 없음');
-                XLSX.writeFile(wb, `SNS센터_채팅분석_결과_${moment().format('YYYYMMDD_HHmmss')}.xlsx`);
-                return;
-            }
-            
-            function analyzeGroup(groupName, groupMerged, groupUserChat, groupManager) {
-                log(`'${groupName}' 분석 중...`);
+            try {
+                log('엑셀 파일 로딩...');
                 
-                if (groupMerged.length === 0 && groupName === "상담사") {
-                    return { summary: [], metrics: [] };
+                const sheets = fileData.SheetNames;
+                const userChatSheets = [];
+                const messageSheets = [];
+                const managerSheets = [];
+                
+                sheets.forEach(sheetName => {
+                    try {
+                        const sheet = XLSX.utils.sheet_to_json(fileData.Sheets[sheetName], {raw: false, dateNF: 'yyyy-mm-dd hh:mm:ss'});
+                        if (sheetName.includes('UserChat data')) {
+                            userChatSheets.push(sheet);
+                        } else if (sheetName.includes('Message data')) {
+                            messageSheets.push(sheet);
+                        } else if (sheetName.includes('Manager data')) {
+                            managerSheets.push(sheet);
+                        }
+                    } catch (e) {
+                        log(`시트 ${sheetName} 읽기 실패: ${e.message}`);
+                    }
+                });
+                
+                if (userChatSheets.length === 0 || messageSheets.length === 0 || managerSheets.length === 0) {
+                    log("오류: 필수 시트를 찾을 수 없습니다");
+                    alert('필수 시트(UserChat data, Message data, Manager data)를 찾을 수 없습니다.');
+                    return null;
                 }
                 
-                const uniqueAuthors = [...new Set(groupMerged.map(row => row.authorName))];
-                const assigneeAuthors = [...new Set(groupUserChat.map(uc => {
-                    const mgr = groupManager.find(m => m.id === uc.assigneeId);
-                    return mgr ? mgr.name : null;
-                }).filter(n => n))];
-                const allAuthors = [...new Set([...uniqueAuthors, ...assigneeAuthors])];
+                log('시트 통합 및 중복 제거...');
                 
-                const nonAssignee = groupMerged.filter(row => row.personId !== row.assigneeId);
-                const assignee = groupMerged.filter(row => row.personId === row.assigneeId);
+                const userChatData = [];
+                const messageData = [];
+                const managerData = [];
                 
-                const metrics = {};
-                allAuthors.forEach(author => {
-                    metrics[author] = {
-                        authorName: author,
-                        HIR: 0,
-                        IIF: 0,
-                        CIS: 0,
-                        DLS: 0,
-                        ALS: 0
-                    };
-                });
-                
-                const authorCollabChats = {};
-                const authorTotalChats = {};
-                
-                nonAssignee.forEach(row => {
-                    if (!authorCollabChats[row.authorName]) {
-                        authorCollabChats[row.authorName] = new Set();
-                    }
-                    authorCollabChats[row.authorName].add(row.chatId);
-                });
-                
-                groupMerged.forEach(row => {
-                    if (!authorTotalChats[row.authorName]) {
-                        authorTotalChats[row.authorName] = new Set();
-                    }
-                    authorTotalChats[row.authorName].add(row.chatId);
-                });
-                
-                allAuthors.forEach(author => {
-                    const collab = authorCollabChats[author] ? authorCollabChats[author].size : 0;
-                    const total = authorTotalChats[author] ? authorTotalChats[author].size : 0;
-                    metrics[author].HIR = total > 0 ? collab / total : 0;
-                });
-                
-                const chatLengths = {};
-                groupMerged.forEach(row => {
-                    chatLengths[row.chatId] = (chatLengths[row.chatId] || 0) + 1;
-                });
-                
-                nonAssignee.forEach(row => {
-                    const chatLength = chatLengths[row.chatId] || 0;
-                    metrics[row.authorName].IIF += chatLength;
-                });
-                
-                const coreKeywords = ['월요금', '사은품', '위약금', '결합', '설치일', '설치비', '약정', '지원금', '할인', '통신사', '요금제', '인터넷', '휴대폰'];
-                nonAssignee.forEach(row => {
-                    const text = row.plainText || '';
-                    const hasKeyword = coreKeywords.some(keyword => text.includes(keyword));
-                    if (hasKeyword) {
-                        metrics[row.authorName].CIS += 1;
-                    }
-                });
-                
-                const msgLengths = {};
-                const msgCounts = {};
-                nonAssignee.forEach(row => {
-                    const text = row.plainText || '';
-                    msgLengths[row.authorName] = (msgLengths[row.authorName] || 0) + text.length;
-                    msgCounts[row.authorName] = (msgCounts[row.authorName] || 0) + 1;
-                });
-                
-                allAuthors.forEach(author => {
-                    const totalLength = msgLengths[author] || 0;
-                    const count = msgCounts[author] || 0;
-                    metrics[author].DLS = count > 0 ? totalLength / count : 0;
-                });
-                
-                nonAssignee.forEach(row => {
-                    const text = row.plainText || '';
-                    if (text.includes('https://form.ajd.co.kr/')) {
-                        metrics[row.authorName].ALS += 10;
-                    }
-                });
-                
-                function getBaseScore(data, authorName) {
-                    const authorData = data.filter(row => row.authorName === authorName);
-                    if (authorData.length === 0) return 0;
-                    
-                    const msgCounts = {};
-                    authorData.forEach(row => {
-                        const text = row.plainText || '';
-                        msgCounts[text] = (msgCounts[text] || 0) + 1;
-                    });
-                    
-                    let score = 0;
-                    authorData.forEach(row => {
-                        const text = row.plainText || '';
-                        const count = msgCounts[text] || 1;
-                        score += Math.log(1 + data.length / count);
-                    });
-                    
-                    return score;
-                }
-                
-                const summary = allAuthors.map(author => {
-                    const baseHelpScore = getBaseScore(nonAssignee, author);
-                    const baseAssignedScore = getBaseScore(assignee, author);
-                    
-                    const alsValues = allAuthors.map(a => metrics[a].ALS);
-                    const minAls = Math.min(...alsValues);
-                    const maxAls = Math.max(...alsValues);
-                    const normAls = maxAls > minAls ? (metrics[author].ALS - minAls) / (maxAls - minAls) : 0;
-                    
-                    const helpCorrection = normAls * 3;
-                    const helpQualityScore = baseHelpScore * (1 + helpCorrection);
-                    let assignedQualityScore = baseAssignedScore;
-                    
-                    const authorId = groupManager.find(m => m.name === author)?.id;
-                    const assignedChatCount = authorId ? 
-                        groupUserChat.filter(uc => uc.assigneeId === authorId).length : 0;
-                    
-                    const assignedMsgs = assignee.filter(row => row.authorName === author);
-                    const helpMsgs = nonAssignee.filter(row => row.authorName === author);
-                    
-                    const assignedMsgCount = assignedMsgs.length;
-                    const assignedCharCount = assignedMsgs.reduce((sum, row) => sum + (row.plainText || '').length, 0);
-                    
-                    const helpChatIds = new Set(helpMsgs.map(row => row.chatId));
-                    const helpChatCount = helpChatIds.size;
-                    const helpMsgCount = helpMsgs.length;
-                    const helpCharCount = helpMsgs.reduce((sum, row) => sum + (row.plainText || '').length, 0);
-                    
-                    return {
-                        상담사명: author,
-                        '담당 상담 수': assignedChatCount,
-                        '담당 메시지 수': assignedMsgCount,
-                        '담당 글자 수': assignedCharCount,
-                        '도움 상담 수': helpChatCount,
-                        '도움 메시지 수': helpMsgCount,
-                        '도움 글자 수': helpCharCount,
-                        '담당 정성 점수': assignedQualityScore,
-                        '도움 정성 점수': helpQualityScore,
-                        '총 정성 점수': assignedQualityScore + helpQualityScore,
-                        ...metrics[author]
-                    };
-                });
-                
-                const totalHelpScore = summary.reduce((sum, row) => sum + row['도움 정성 점수'], 0);
-                const totalAssignedScore = summary.reduce((sum, row) => sum + row['담당 정성 점수'], 0);
-                
-                if (totalAssignedScore > 0 && totalHelpScore > 0) {
-                    const ratioFactor = (totalHelpScore / 3) / totalAssignedScore;
-                    summary.forEach(row => {
-                        row['담당 정성 점수'] *= ratioFactor;
-                        row['총 정성 점수'] = row['담당 정성 점수'] + row['도움 정성 점수'];
-                    });
-                }
-                
-                summary.forEach(row => {
-                    Object.keys(row).forEach(key => {
-                        if (typeof row[key] === 'number' && key !== '상담사명') {
-                            row[key] = Math.round(row[key] * 100) / 100;
+                const userChatIds = new Set();
+                userChatSheets.forEach(sheet => {
+                    sheet.forEach(row => {
+                        const id = cleanId(row.id);
+                        if (id && !userChatIds.has(id)) {
+                            userChatIds.add(id);
+                            userChatData.push({
+                                ...row,
+                                id: id,
+                                assigneeId: cleanId(row.assigneeId),
+                                firstOpenedAt: parseDate(row.firstOpenedAt)
+                            });
                         }
                     });
                 });
                 
-                const metricsData = summary.map(row => ({
-                    '상담사명': row.상담사명,
-                    '도움 개입률': row.HIR,
-                    '개입 영향력 계수': row.IIF,
-                    '콘텐츠 정보 점수': row.CIS,
-                    '언어 깊이 점수': row.DLS,
-                    '신청서 링크 점수': row.ALS
-                }));
+                const messageKeys = new Set();
+                messageSheets.forEach(sheet => {
+                    sheet.forEach(row => {
+                        const chatId = cleanId(row.chatId);
+                        const personId = cleanId(row.personId);
+                        const plainText = row.plainText || '';
+                        const key = `${chatId}_${personId}_${row.createdAt}_${plainText}`;
+                        
+                        if (!messageKeys.has(key)) {
+                            messageKeys.add(key);
+                            messageData.push({
+                                ...row,
+                                chatId: chatId,
+                                personId: personId,
+                                plainText: plainText,
+                                createdAt: parseDate(row.createdAt)
+                            });
+                        }
+                    });
+                });
                 
-                return { summary, metrics: metricsData };
-            }
-            
-            const agentFiltered = agentData.filter(row => filteredAgents.includes(row.authorName));
-            const agentUserChat = userChat.filter(uc => {
-                const mgr = manager.find(m => m.id === uc.assigneeId);
-                return mgr && filteredAgents.includes(mgr.name);
-            });
-            
-            const agentAnalysis = analyzeGroup("상담사", agentFiltered, agentUserChat, manager);
-            
-            const managerUserChat = userChat.filter(uc => {
-                const mgr = manager.find(m => m.id === uc.assigneeId);
-                return mgr && managersList.includes(mgr.name);
-            });
-            
-            const managerAnalysis = analyzeGroup("관리자", managerData, managerUserChat, manager);
-            
-            const wb = XLSX.utils.book_new();
-            
-            const scoreboardData = [];
-            const metricsToRank = [
-                '담당 상담 수', '담당 메시지 수', '담당 글자 수',
-                '도움 상담 수', '도움 메시지 수', '도움 글자 수',
-                '담당 정성 점수', '도움 정성 점수', '총 정성 점수'
-            ];
-            
-            metricsToRank.forEach(metric => {
-                const sorted = [...agentAnalysis.summary].sort((a, b) => b[metric] - a[metric]);
-                const top5 = sorted.slice(0, 5);
-                const bottom5 = sorted.slice(-5).reverse();
+                const managerIds = new Set();
+                managerSheets.forEach(sheet => {
+                    sheet.forEach(row => {
+                        const id = cleanId(row.id);
+                        if (id && !managerIds.has(id)) {
+                            managerIds.add(id);
+                            managerData.push({
+                                ...row,
+                                id: id,
+                                name: row.name || ''
+                            });
+                        }
+                    });
+                });
                 
-                scoreboardData.push([`--- ${metric} 순위 ---`, '', '', '', '']);
-                scoreboardData.push(['Top 5', '점수', '', 'Bottom 5', '점수']);
+                log('데이터 정제 및 병합...');
                 
-                for (let i = 0; i < 5; i++) {
-                    const row = [];
-                    if (i < top5.length) {
-                        row.push(top5[i].상담사명, top5[i][metric]);
-                    } else {
-                        row.push('', '');
-                    }
-                    row.push('');
-                    if (i < bottom5.length) {
-                        row.push(bottom5[i].상담사명, bottom5[i][metric]);
-                    } else {
-                        row.push('', '');
-                    }
-                    scoreboardData.push(row);
+                const startTs = new Date(startDateStr);
+                const endTs = new Date(endDateStr);
+                endTs.setDate(endTs.getDate() + 1);
+                
+                const filteredUserChat = userChatData.filter(row => {
+                    return row.firstOpenedAt && row.firstOpenedAt >= startTs && row.firstOpenedAt < endTs;
+                });
+                log(`담당 상담: ${filteredUserChat.length}개`);
+                
+                const filteredMessage = messageData.filter(row => {
+                    return row.createdAt && row.createdAt >= startTs && row.createdAt < endTs;
+                });
+                log(`메시지: ${filteredMessage.length}개`);
+                
+                if (filteredMessage.length === 0) {
+                    log('선택된 기간 내 메시지가 없습니다');
+                    alert('선택된 기간 내에 메시지 데이터가 없습니다.');
+                    return null;
                 }
                 
-                scoreboardData.push(['', '', '', '', '']);
-            });
-            
-            const wsScoreboard = XLSX.utils.aoa_to_sheet(scoreboardData);
-            XLSX.utils.book_append_sheet(wb, wsScoreboard, '스코어보드');
-            
-            const sortedSummary = agentAnalysis.summary.sort((a, b) => b['총 정성 점수'] - a['총 정성 점수']);
-            const wsSummary = XLSX.utils.json_to_sheet(sortedSummary);
-            XLSX.utils.book_append_sheet(wb, wsSummary, '채팅분석_요약');
-            log("'채팅분석_요약' 생성");
-            
-            if (managerAnalysis.summary.length > 0) {
-                const sortedManager = managerAnalysis.summary.sort((a, b) => b['총 정성 점수'] - a['총 정성 점수']);
-                const wsManager = XLSX.utils.json_to_sheet(sortedManager);
-                XLSX.utils.book_append_sheet(wb, wsManager, '관리자_분석');
-                log("'관리자_분석' 생성");
-            }
-            
-            const sortedMetrics = agentAnalysis.metrics.sort((a, b) => b['신청서 링크 점수'] - a['신청서 링크 점수']);
-            const wsMetrics = XLSX.utils.json_to_sheet(sortedMetrics);
-            XLSX.utils.book_append_sheet(wb, wsMetrics, '채팅분석_지표');
-            log("'채팅분석_지표' 생성");
-            
-            const nonAssigneeDetail = agentFiltered.filter(row => row.personId !== row.assigneeId);
-            if (nonAssigneeDetail.length > 0) {
-                const detailHelp = nonAssigneeDetail.map(row => ({
-                    '상담사명': row.authorName,
-                    '채팅방 ID': row.chatId,
-                    '메시지 작성일시': row.createdAt instanceof Date ? 
-                        row.createdAt.toISOString().replace('T', ' ').substring(0, 19) : row.createdAt,
-                    '메시지 원문': row.plainText
-                })).sort((a, b) => {
-                    if (a.상담사명 !== b.상담사명) return a.상담사명.localeCompare(b.상담사명);
-                    return new Date(a['메시지 작성일시']) - new Date(b['메시지 작성일시']);
+                const mergedData = [];
+                filteredMessage.forEach(msg => {
+                    const userChat = userChatData.find(uc => uc.id === msg.chatId);
+                    if (userChat && userChat.assigneeId) {
+                        const manager = managerData.find(m => m.id === msg.personId);
+                        if (manager && manager.name) {
+                            mergedData.push({
+                                ...msg,
+                                assigneeId: userChat.assigneeId,
+                                authorName: manager.name
+                            });
+                        }
+                    }
                 });
                 
-                const wsHelp = XLSX.utils.json_to_sheet(detailHelp);
-                XLSX.utils.book_append_sheet(wb, wsHelp, '상세 메시지 내역_도움');
+                log(`유효 레코드: ${mergedData.length}개`);
+                
+                if (mergedData.length === 0) {
+                    log('병합된 데이터가 없습니다');
+                    alert('분석 가능한 데이터가 없습니다.');
+                    return null;
+                }
+                
+                return {
+                    merged: mergedData,
+                    userChat: filteredUserChat,
+                    manager: managerData
+                };
+            } catch (error) {
+                log(`데이터 처리 오류: ${error.message}`);
+                throw error;
             }
-            
-            const assigneeDetail = agentFiltered.filter(row => row.personId === row.assigneeId);
-            if (assigneeDetail.length > 0) {
-                const detailAssignee = assigneeDetail.map(row => ({
-                    '상담사명': row.authorName,
-                    '채팅방 ID': row.chatId,
-                    '메시지 작성일시': row.createdAt instanceof Date ? 
-                        row.createdAt.toISOString().replace('T', ' ').substring(0, 19) : row.createdAt,
-                    '메시지 원문': row.plainText
-                })).sort((a, b) => {
-                    if (a.상담사명 !== b.상담사명) return a.상담사명.localeCompare(b.상담사명);
-                    return new Date(a['메시지 작성일시']) - new Date(b['메시지 작성일시']);
+        }
+        
+        // 결과 엑셀 생성
+        async function createOutputExcel(processedData, startDateStr, endDateStr) {
+            try {
+                const merged = processedData.merged;
+                const userChat = processedData.userChat;
+                const manager = processedData.manager;
+                
+                const managersList = document.getElementById('managers').value.split(',').map(n => n.trim()).filter(n => n);
+                const exclusionList = document.getElementById('exclusions').value.split(',').map(n => n.trim()).filter(n => n);
+                
+                if (exclusionList.length > 0) {
+                    log(`제외: ${exclusionList.join(', ')}`);
+                }
+                
+                const managerData = merged.filter(row => managersList.includes(row.authorName));
+                const agentData = merged.filter(row => 
+                    !managersList.includes(row.authorName) && !exclusionList.includes(row.authorName)
+                );
+                
+                const uniqueAgents = [...new Set(agentData.map(row => row.authorName))];
+                const agentNonAssignee = agentData.filter(row => row.personId !== row.assigneeId);
+                
+                const collaboratedChats = {};
+                const totalChats = {};
+                
+                agentNonAssignee.forEach(row => {
+                    if (!collaboratedChats[row.authorName]) {
+                        collaboratedChats[row.authorName] = new Set();
+                    }
+                    collaboratedChats[row.authorName].add(row.chatId);
                 });
                 
-                const wsAssignee = XLSX.utils.json_to_sheet(detailAssignee);
-                XLSX.utils.book_append_sheet(wb, wsAssignee, '상세 메시지 내역_담당자');
+                agentData.forEach(row => {
+                    if (!totalChats[row.authorName]) {
+                        totalChats[row.authorName] = new Set();
+                    }
+                    totalChats[row.authorName].add(row.chatId);
+                });
+                
+                const hirSummary = {};
+                uniqueAgents.forEach(agent => {
+                    const collab = collaboratedChats[agent] ? collaboratedChats[agent].size : 0;
+                    const total = totalChats[agent] ? totalChats[agent].size : 0;
+                    hirSummary[agent] = total > 0 ? collab / total : 0;
+                });
+                
+                const totalMsgCounts = {};
+                agentData.forEach(row => {
+                    totalMsgCounts[row.authorName] = (totalMsgCounts[row.authorName] || 0) + 1;
+                });
+                
+                const startDate = new Date(startDateStr);
+                const endDate = new Date(endDateStr);
+                const analysisDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+                const minMsgThreshold = analysisDays * 10;
+                log(`분석 기간: ${analysisDays}일, 최소 메시지: ${minMsgThreshold}개`);
+                
+                log(`필터링 전: ${uniqueAgents.length}명`);
+                const filteredAgents = uniqueAgents.filter(agent => {
+                    const hir = hirSummary[agent] || 0;
+                    const msgCount = totalMsgCounts[agent] || 0;
+                    return hir > 0 && hir < 1 && msgCount > 10 && msgCount >= minMsgThreshold;
+                });
+                log(`필터링 후: ${filteredAgents.length}명`);
+                
+                if (filteredAgents.length === 0) {
+                    log('필터링 후 분석 대상 없음');
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.json_to_sheet([{'알림': '필터 조건에 해당하는 상담사가 없어 데이터를 생성할 수 없습니다.'}]);
+                    XLSX.utils.book_append_sheet(wb, ws, '결과 없음');
+                    const outputFileName = `SNS센터_채팅분석_결과_${getCurrentTimeString()}.xlsx`;
+                    XLSX.writeFile(wb, outputFileName);
+                    return;
+                }
+                
+                function analyzeGroup(groupName, groupMerged, groupUserChat, groupManager) {
+                    log(`'${groupName}' 분석 중...`);
+                    
+                    if (groupMerged.length === 0 && groupName === "상담사") {
+                        return { summary: [], metrics: [] };
+                    }
+                    
+                    const uniqueAuthors = [...new Set(groupMerged.map(row => row.authorName))];
+                    const assigneeAuthors = [...new Set(groupUserChat.map(uc => {
+                        const mgr = groupManager.find(m => m.id === uc.assigneeId);
+                        return mgr ? mgr.name : null;
+                    }).filter(n => n))];
+                    const allAuthors = [...new Set([...uniqueAuthors, ...assigneeAuthors])];
+                    
+                    const nonAssignee = groupMerged.filter(row => row.personId !== row.assigneeId);
+                    const assignee = groupMerged.filter(row => row.personId === row.assigneeId);
+                    
+                    const metrics = {};
+                    allAuthors.forEach(author => {
+                        metrics[author] = {
+                            authorName: author,
+                            HIR: 0,
+                            IIF: 0,
+                            CIS: 0,
+                            DLS: 0,
+                            ALS: 0
+                        };
+                    });
+                    
+                    const authorCollabChats = {};
+                    const authorTotalChats = {};
+                    
+                    nonAssignee.forEach(row => {
+                        if (!authorCollabChats[row.authorName]) {
+                            authorCollabChats[row.authorName] = new Set();
+                        }
+                        authorCollabChats[row.authorName].add(row.chatId);
+                    });
+                    
+                    groupMerged.forEach(row => {
+                        if (!authorTotalChats[row.authorName]) {
+                            authorTotalChats[row.authorName] = new Set();
+                        }
+                        authorTotalChats[row.authorName].add(row.chatId);
+                    });
+                    
+                    allAuthors.forEach(author => {
+                        const collab = authorCollabChats[author] ? authorCollabChats[author].size : 0;
+                        const total = authorTotalChats[author] ? authorTotalChats[author].size : 0;
+                        metrics[author].HIR = total > 0 ? collab / total : 0;
+                    });
+                    
+                    const chatLengths = {};
+                    groupMerged.forEach(row => {
+                        chatLengths[row.chatId] = (chatLengths[row.chatId] || 0) + 1;
+                    });
+                    
+                    nonAssignee.forEach(row => {
+                        const chatLength = chatLengths[row.chatId] || 0;
+                        metrics[row.authorName].IIF += chatLength;
+                    });
+                    
+                    const coreKeywords = ['월요금', '사은품', '위약금', '결합', '설치일', '설치비', '약정', '지원금', '할인', '통신사', '요금제', '인터넷', '휴대폰'];
+                    nonAssignee.forEach(row => {
+                        const text = row.plainText || '';
+                        const hasKeyword = coreKeywords.some(keyword => text.includes(keyword));
+                        if (hasKeyword) {
+                            metrics[row.authorName].CIS += 1;
+                        }
+                    });
+                    
+                    const msgLengths = {};
+                    const msgCounts = {};
+                    nonAssignee.forEach(row => {
+                        const text = row.plainText || '';
+                        msgLengths[row.authorName] = (msgLengths[row.authorName] || 0) + text.length;
+                        msgCounts[row.authorName] = (msgCounts[row.authorName] || 0) + 1;
+                    });
+                    
+                    allAuthors.forEach(author => {
+                        const totalLength = msgLengths[author] || 0;
+                        const count = msgCounts[author] || 0;
+                        metrics[author].DLS = count > 0 ? totalLength / count : 0;
+                    });
+                    
+                    nonAssignee.forEach(row => {
+                        const text = row.plainText || '';
+                        if (text.includes('https://form.ajd.co.kr/')) {
+                            metrics[row.authorName].ALS += 10;
+                        }
+                    });
+                    
+                    function getBaseScore(data, authorName) {
+                        const authorData = data.filter(row => row.authorName === authorName);
+                        if (authorData.length === 0) return 0;
+                        
+                        const msgCounts = {};
+                        authorData.forEach(row => {
+                            const text = row.plainText || '';
+                            msgCounts[text] = (msgCounts[text] || 0) + 1;
+                        });
+                        
+                        let score = 0;
+                        authorData.forEach(row => {
+                            const text = row.plainText || '';
+                            const count = msgCounts[text] || 1;
+                            score += Math.log(1 + data.length / count);
+                        });
+                        
+                        return score;
+                    }
+                    
+                    const summary = allAuthors.map(author => {
+                        const baseHelpScore = getBaseScore(nonAssignee, author);
+                        const baseAssignedScore = getBaseScore(assignee, author);
+                        
+                        const alsValues = allAuthors.map(a => metrics[a].ALS);
+                        const minAls = Math.min(...alsValues);
+                        const maxAls = Math.max(...alsValues);
+                        const normAls = maxAls > minAls ? (metrics[author].ALS - minAls) / (maxAls - minAls) : 0;
+                        
+                        const helpCorrection = normAls * 3;
+                        const helpQualityScore = baseHelpScore * (1 + helpCorrection);
+                        let assignedQualityScore = baseAssignedScore;
+                        
+                        const authorId = groupManager.find(m => m.name === author)?.id;
+                        const assignedChatCount = authorId ? 
+                            groupUserChat.filter(uc => uc.assigneeId === authorId).length : 0;
+                        
+                        const assignedMsgs = assignee.filter(row => row.authorName === author);
+                        const helpMsgs = nonAssignee.filter(row => row.authorName === author);
+                        
+                        const assignedMsgCount = assignedMsgs.length;
+                        const assignedCharCount = assignedMsgs.reduce((sum, row) => sum + (row.plainText || '').length, 0);
+                        
+                        const helpChatIds = new Set(helpMsgs.map(row => row.chatId));
+                        const helpChatCount = helpChatIds.size;
+                        const helpMsgCount = helpMsgs.length;
+                        const helpCharCount = helpMsgs.reduce((sum, row) => sum + (row.plainText || '').length, 0);
+                        
+                        return {
+                            상담사명: author,
+                            '담당 상담 수': assignedChatCount,
+                            '담당 메시지 수': assignedMsgCount,
+                            '담당 글자 수': assignedCharCount,
+                            '도움 상담 수': helpChatCount,
+                            '도움 메시지 수': helpMsgCount,
+                            '도움 글자 수': helpCharCount,
+                            '담당 정성 점수': assignedQualityScore,
+                            '도움 정성 점수': helpQualityScore,
+                            '총 정성 점수': assignedQualityScore + helpQualityScore,
+                            ...metrics[author]
+                        };
+                    });
+                    
+                    const totalHelpScore = summary.reduce((sum, row) => sum + row['도움 정성 점수'], 0);
+                    const totalAssignedScore = summary.reduce((sum, row) => sum + row['담당 정성 점수'], 0);
+                    
+                    if (totalAssignedScore > 0 && totalHelpScore > 0) {
+                        const ratioFactor = (totalHelpScore / 3) / totalAssignedScore;
+                        summary.forEach(row => {
+                            row['담당 정성 점수'] *= ratioFactor;
+                            row['총 정성 점수'] = row['담당 정성 점수'] + row['도움 정성 점수'];
+                        });
+                    }
+                    
+                    summary.forEach(row => {
+                        Object.keys(row).forEach(key => {
+                            if (typeof row[key] === 'number' && key !== '상담사명') {
+                                row[key] = Math.round(row[key] * 100) / 100;
+                            }
+                        });
+                    });
+                    
+                    const metricsData = summary.map(row => ({
+                        '상담사명': row.상담사명,
+                        '도움 개입률': row.HIR,
+                        '개입 영향력 계수': row.IIF,
+                        '콘텐츠 정보 점수': row.CIS,
+                        '언어 깊이 점수': row.DLS,
+                        '신청서 링크 점수': row.ALS
+                    }));
+                    
+                    return { summary, metrics: metricsData };
+                }
+                
+                const agentFiltered = agentData.filter(row => filteredAgents.includes(row.authorName));
+                const agentUserChat = userChat.filter(uc => {
+                    const mgr = manager.find(m => m.id === uc.assigneeId);
+                    return mgr && filteredAgents.includes(mgr.name);
+                });
+                
+                const agentAnalysis = analyzeGroup("상담사", agentFiltered, agentUserChat, manager);
+                
+                const managerUserChat = userChat.filter(uc => {
+                    const mgr = manager.find(m => m.id === uc.assigneeId);
+                    return mgr && managersList.includes(mgr.name);
+                });
+                
+                const managerAnalysis = analyzeGroup("관리자", managerData, managerUserChat, manager);
+                
+                const wb = XLSX.utils.book_new();
+                
+                const scoreboardData = [];
+                const metricsToRank = [
+                    '담당 상담 수', '담당 메시지 수', '담당 글자 수',
+                    '도움 상담 수', '도움 메시지 수', '도움 글자 수',
+                    '담당 정성 점수', '도움 정성 점수', '총 정성 점수'
+                ];
+                
+                metricsToRank.forEach(metric => {
+                    const sorted = [...agentAnalysis.summary].sort((a, b) => b[metric] - a[metric]);
+                    const top5 = sorted.slice(0, 5);
+                    const bottom5 = sorted.slice(-5).reverse();
+                    
+                    scoreboardData.push([`--- ${metric} 순위 ---`, '', '', '', '']);
+                    scoreboardData.push(['Top 5', '점수', '', 'Bottom 5', '점수']);
+                    
+                    for (let i = 0; i < 5; i++) {
+                        const row = [];
+                        if (i < top5.length) {
+                            row.push(top5[i].상담사명, top5[i][metric]);
+                        } else {
+                            row.push('', '');
+                        }
+                        row.push('');
+                        if (i < bottom5.length) {
+                            row.push(bottom5[i].상담사명, bottom5[i][metric]);
+                        } else {
+                            row.push('', '');
+                        }
+                        scoreboardData.push(row);
+                    }
+                    
+                    scoreboardData.push(['', '', '', '', '']);
+                });
+                
+                const wsScoreboard = XLSX.utils.aoa_to_sheet(scoreboardData);
+                XLSX.utils.book_append_sheet(wb, wsScoreboard, '스코어보드');
+                
+                const sortedSummary = agentAnalysis.summary.sort((a, b) => b['총 정성 점수'] - a['총 정성 점수']);
+                const wsSummary = XLSX.utils.json_to_sheet(sortedSummary);
+                XLSX.utils.book_append_sheet(wb, wsSummary, '채팅분석_요약');
+                log("'채팅분석_요약' 생성");
+                
+                if (managerAnalysis.summary.length > 0) {
+                    const sortedManager = managerAnalysis.summary.sort((a, b) => b['총 정성 점수'] - a['총 정성 점수']);
+                    const wsManager = XLSX.utils.json_to_sheet(sortedManager);
+                    XLSX.utils.book_append_sheet(wb, wsManager, '관리자_분석');
+                    log("'관리자_분석' 생성");
+                }
+                
+                const sortedMetrics = agentAnalysis.metrics.sort((a, b) => b['신청서 링크 점수'] - a['신청서 링크 점수']);
+                const wsMetrics = XLSX.utils.json_to_sheet(sortedMetrics);
+                XLSX.utils.book_append_sheet(wb, wsMetrics, '채팅분석_지표');
+                log("'채팅분석_지표' 생성");
+                
+                const nonAssigneeDetail = agentFiltered.filter(row => row.personId !== row.assigneeId);
+                if (nonAssigneeDetail.length > 0) {
+                    const detailHelp = nonAssigneeDetail.map(row => ({
+                        '상담사명': row.authorName,
+                        '채팅방 ID': row.chatId,
+                        '메시지 작성일시': formatDateTime(row.createdAt),
+                        '메시지 원문': row.plainText || ''
+                    })).sort((a, b) => {
+                        if (a.상담사명 !== b.상담사명) return a.상담사명.localeCompare(b.상담사명);
+                        return a['메시지 작성일시'].localeCompare(b['메시지 작성일시']);
+                    });
+                    
+                    const wsHelp = XLSX.utils.json_to_sheet(detailHelp);
+                    XLSX.utils.book_append_sheet(wb, wsHelp, '상세 메시지 내역_도움');
+                }
+                
+                const assigneeDetail = agentFiltered.filter(row => row.personId === row.assigneeId);
+                if (assigneeDetail.length > 0) {
+                    const detailAssignee = assigneeDetail.map(row => ({
+                        '상담사명': row.authorName,
+                        '채팅방 ID': row.chatId,
+                        '메시지 작성일시': formatDateTime(row.createdAt),
+                        '메시지 원문': row.plainText || ''
+                    })).sort((a, b) => {
+                        if (a.상담사명 !== b.상담사명) return a.상담사명.localeCompare(b.상담사명);
+                        return a['메시지 작성일시'].localeCompare(b['메시지 작성일시']);
+                    });
+                    
+                    const wsAssignee = XLSX.utils.json_to_sheet(detailAssignee);
+                    XLSX.utils.book_append_sheet(wb, wsAssignee, '상세 메시지 내역_담당자');
+                }
+                
+                const helpData = [
+                    ['구분', '지표명', '정의', '산식'],
+                    ['정량 지표', 'HIR (도움 개입률)', '한 상담사가 참여한 전체 상담 중, 협업자로 참여한 상담의 비율', '협업 참여 상담 건수 / 총 참여 상담 건수'],
+                    ['정량 지표', 'IIF (개입 영향력 계수)', '단순 메시지 수를 넘어, 얼마나 길고 복잡한 대화에 개입했는지를 가중치로 평가', 'Σ (협업 참여한 각 상담 건의 전체 메시지 수)'],
+                    ['정성 지표', 'CIS (콘텐츠 정보 점수)', '도움 메시지 중, 사전에 정의된 핵심 상품 키워드를 포함한 메시지의 개수', 'Σ (도움 메시지 내 핵심 키워드 포함 개수)'],
+                    ['정성 지표', 'DLS (언어 깊이 점수)', '도움 메시지 1개당 평균 글자 길이', '도움 메시지 총 글자 수 / 도움 메시지 총 개수'],
+                    ['정성 지표', 'ALS (신청서 링크 점수)', '도움 메시지에서 신청서 링크를 발송한 횟수에 기반한 점수', 'Σ (신청서 링크 발송 횟수) * 10점'],
+                    ['정성 점수', '도움 정성 점수', '도움 메시지의 희소성과 ALS 보정치를 반영한 질적 기여도 점수', '기본 점수 * (1 + (정규화 ALS * 3))'],
+                    ['정성 점수', '담당 정성 점수', '담당 메시지의 희소성 점수를 반영하고, 도움 정성 점수와의 비율을 조정한 질적 기여도 점수', '기본 점수 * 비율 조정 계수'],
+                    ['정성 점수', '총 정성 점수', '도움 정성 점수와 담당 정성 점수의 합산', '도움 정성 점수 + 담당 정성 점수']
+                ];
+                const wsHelp = XLSX.utils.aoa_to_sheet(helpData);
+                XLSX.utils.book_append_sheet(wb, wsHelp, '도움말');
+                log("'도움말' 생성");
+                
+                const outputFileName = `SNS센터_채팅분석_결과_${getCurrentTimeString()}.xlsx`;
+                XLSX.writeFile(wb, outputFileName);
+                log(`파일 저장: ${outputFileName}`);
+            } catch (error) {
+                log(`엑셀 생성 오류: ${error.message}`);
+                throw error;
             }
-            
-            const helpData = [
-                ['구분', '지표명', '정의', '산식'],
-                ['정량 지표', 'HIR (도움 개입률)', '한 상담사가 참여한 전체 상담 중, 협업자로 참여한 상담의 비율', '협업 참여 상담 건수 / 총 참여 상담 건수'],
-                ['정량 지표', 'IIF (개입 영향력 계수)', '단순 메시지 수를 넘어, 얼마나 길고 복잡한 대화에 개입했는지를 가중치로 평가', 'Σ (협업 참여한 각 상담 건의 전체 메시지 수)'],
-                ['정성 지표', 'CIS (콘텐츠 정보 점수)', '도움 메시지 중, 사전에 정의된 핵심 상품 키워드를 포함한 메시지의 개수', 'Σ (도움 메시지 내 핵심 키워드 포함 개수)'],
-                ['정성 지표', 'DLS (언어 깊이 점수)', '도움 메시지 1개당 평균 글자 길이', '도움 메시지 총 글자 수 / 도움 메시지 총 개수'],
-                ['정성 지표', 'ALS (신청서 링크 점수)', '도움 메시지에서 신청서 링크를 발송한 횟수에 기반한 점수', 'Σ (신청서 링크 발송 횟수) * 10점'],
-                ['정성 점수', '도움 정성 점수', '도움 메시지의 희소성과 ALS 보정치를 반영한 질적 기여도 점수', '기본 점수 * (1 + (정규화 ALS * 3))'],
-                ['정성 점수', '담당 정성 점수', '담당 메시지의 희소성 점수를 반영하고, 도움 정성 점수와의 비율을 조정한 질적 기여도 점수', '기본 점수 * 비율 조정 계수'],
-                ['정성 점수', '총 정성 점수', '도움 정성 점수와 담당 정성 점수의 합산', '도움 정성 점수 + 담당 정성 점수']
-            ];
-            const wsHelp = XLSX.utils.aoa_to_sheet(helpData);
-            XLSX.utils.book_append_sheet(wb, wsHelp, '도움말');
-            log("'도움말' 생성");
-            
-            const outputFileName = `SNS센터_채팅분석_결과_${moment().format('YYYYMMDD_HHmmss')}.xlsx`;
-            XLSX.writeFile(wb, outputFileName);
-            log(`파일 저장: ${outputFileName}`);
         }
     </script>
 </body>
